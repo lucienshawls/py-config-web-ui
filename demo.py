@@ -10,7 +10,7 @@ user_config_names = {
 def mycheck(config):
     if config["value"] == 0:
         return ResultStatus(True)
-    return ResultStatus(False, {})
+    return ResultStatus(False, [])
 
 
 config_editor = ConfigEditor(app_name="Aurora Config Editor")

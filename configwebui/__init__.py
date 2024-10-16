@@ -66,13 +66,15 @@ class ResultStatus:
         if len(self.messages) == 0:
             return f"ResultStatus(status={self.status}, messages=[])"
         else:
-            return f"ResultStatus(status={self.status}, messages=[\n\t{',\n\t'.join(self.messages)}\n])"
+            formatted_messages = ",\n\t".join(self.messages)
+            return f"ResultStatus(status={self.status}, messages=[\n\t{formatted_messages}\n])"
 
     def __str__(self) -> str:
         if len(self.messages) == 0:
             return f'Current status: {"Success" if self.status else "Fail"}, Messages: (No messages).\n'
         else:
-            return f'Current status: {"Success" if self.status else "Fail"}, Messages:\n\t{"\n\t".join(self.messages)}\n'
+            formatted_messages = ",\n\t".join(self.messages)
+            return f'Current status: {"Success" if self.status else "Fail"}, Messages:\n\t{formatted_messages}\n'
 
 
 class UserConfig:
