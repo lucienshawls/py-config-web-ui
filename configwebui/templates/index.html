@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" type="text/css" href="static/css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="static/css/fontawesome.all.css">
+    <link rel="stylesheet" type="text/css" href="static/css/index.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
+        <a class="navbar-brand">{{ title }}</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item w-100">
+                    <select class="form-control w-100" id="pageSelect" onchange="navigateToPage()">
+                        {% for user_config_name, user_config in user_config_store.items() %}
+                        <option value="/{{ user_config_name }}" {% if user_config_name==current_user_config_name
+                            %}selected{% endif %}>{{
+                            user_config.get_friendly_name() }}</option>
+                        {% endfor %}
+                    </select>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Operations
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <a class="dropdown-item" href="">Action</a>
+                        <a class="dropdown-item" href="">Another action</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="">Something else here</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container col-md-8 mt-2">
+        <div class="container col-md-12">
+            <form action="greetings" method="post">
+                <input id="input" type="hidden" name="json">
+                <div id='editor-container'></div>
+                <input id="submit" class="btn btn-primary" width="100" type="submit" value="Hooray" />
+            </form>
+            <br>
+            <h2>Get params</h2>
+            <pre id="get-params"></pre>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim{{ name_mod }}.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle{{ name_mod }}.js"></script>
+    <script src="static/js/jsoneditor{{ name_mod }}.js"></script>
+    <script src="static/js/index.js"></script>
+</body>
+
+</html>
