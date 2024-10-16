@@ -19,4 +19,4 @@ for user_config_name, user_config_friendly_name in user_config_names.items():
         user_config_name=user_config_name,
         user_config_friendly_name=user_config_friendly_name,
     )
-config_editor.run(host="[::]", port=80)
+config_editor.run(host="localhost", port=80)
