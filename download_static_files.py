@@ -71,3 +71,7 @@ def download_files() -> None:
     download_json_editor()
     download_bootstrap()
     download_fontawesome()
+
+
+if __name__ == "__main__":
+    download_files()
