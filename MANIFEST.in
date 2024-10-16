@@ -1,0 +1,2 @@
+include configwebui/static/*
+include configwebui/templates/*
