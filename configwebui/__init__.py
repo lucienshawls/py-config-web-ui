@@ -215,9 +215,9 @@ class ConfigEditor:
     def get_user_config_names(self) -> list[str]:
         return list(self.config_store.keys())
 
-    def get_user_config(self, user_config_name: str) -> dict | list:
+    def get_user_config(self, user_config_name: str) -> UserConfig:
         if user_config_name in self.config_store:
-            return self.config_store[user_config_name].get_config()
+            return self.config_store[user_config_name]
         else:
             raise KeyError(f"Config {user_config_name} not found")
 

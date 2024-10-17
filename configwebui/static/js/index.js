@@ -132,3 +132,24 @@ function navigateToConfig() {
         window.location.href = "/";
     }
 }
+
+function saveConfig() {
+    const pathname = window.location.pathname
+    // 获取 input 标签的值
+    const configValue = document.querySelector('#input').value;
+    // 发送 POST 请求
+    fetch(pathname, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: configValue
+    })
+        .then(response => response.json()) // 解析 JSON 响应
+        .then(data => {
+            console.log('Success:', data);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
