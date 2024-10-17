@@ -38,17 +38,14 @@ def download_bootstrap() -> None:
 
 
 def download_fontawesome() -> None:
-    fontawesome_url = (
-        f"https://use.fontawesome.com/releases/v5.6.1/css/all{NAME_MOD}.css"
-    )
+    # No minified version of fontawesome
+    fontawesome_url = f"https://use.fontawesome.com/releases/v5.6.1/css/all.css"
 
     # Download latest fontawesome
-    save_file(
-        fontawesome_url, f"{STATIC_FILE_DIRECTORY}/css/fontawesome.all{NAME_MOD}.css"
-    )
+    save_file(fontawesome_url, f"{STATIC_FILE_DIRECTORY}/css/fontawesome.all.css")
 
     # Download fontawesome webfonts
-    with open(f"{STATIC_FILE_DIRECTORY}/css/fontawesome.all{NAME_MOD}.css", "r") as f:
+    with open(f"{STATIC_FILE_DIRECTORY}/css/fontawesome.all.css", "r") as f:
         fontawesome_css = f.read()
     font_names_raw = re.findall(r"url\(\.\./webfonts/(.*?)\)", fontawesome_css)
     font_names = set()
