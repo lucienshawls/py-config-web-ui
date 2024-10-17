@@ -26,6 +26,7 @@ import webbrowser
 from flask import Flask
 from collections.abc import Callable
 from jsonschema import validate, ValidationError
+from copy import deepcopy
 
 DEBUG = True
 
@@ -82,6 +83,21 @@ class UserConfig:
     def isvalid(config: dict | list = None) -> ResultStatus:
         return ResultStatus(True)
 
+    @staticmethod
+    def add_order(schema: dict, property_order: int = 0) -> dict:
+        ordered_schema = deepcopy(schema)
+        ordered_schema["propertyOrder"] = property_order
+        if ordered_schema["type"] == "object":
+            for order, property in enumerate(ordered_schema["properties"]):
+                ordered_schema["properties"][property] = UserConfig.add_order(
+                    schema=schema["properties"][property], property_order=order
+                )
+        elif ordered_schema["type"] == "array":
+            ordered_schema["items"] = UserConfig.add_order(
+                schema=schema["items"], property_order=0
+            )
+        return ordered_schema
+
     def check(
         self,
         config: dict | list,
@@ -125,7 +141,7 @@ class UserConfig:
         )
         if result.get_status():
             self.config = config
-            self.schema = schema
+            self.schema = UserConfig.add_order(schema)
             return ResultStatus(True)
         else:
             return result

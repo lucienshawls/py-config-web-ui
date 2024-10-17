@@ -8,6 +8,7 @@ main = Blueprint("main", __name__)
 
 
 @main.route("/")
+@main.route("/config")
 def index():
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
     current_user_config_name = current_config_editor.get_user_config_names()[0]
@@ -28,24 +29,53 @@ def user_config_page(user_config_name):
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
     user_config_names = current_config_editor.get_user_config_names()
     if user_config_name not in user_config_names:
+        flash(f"No such config: <{user_config_name}>", "danger")
+        return redirect(url_for("main.index"))
+    else:
+        return render_template(
+            "index.html",
+            title=current_app.config["app_name"],
+            name_mod=(
+                ".min" if current_app.config["USE_MINIFIED_STATIC_FILES"] else ""
+            ),
+            user_config_store=current_config_editor.config_store,
+            current_user_config_name=user_config_name,
+        )
+
+
+@main.route("/api/config/<user_config_name>", methods=["GET", "POST"])
+def user_config_api(user_config_name):
+    current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
+    user_config_names = current_config_editor.get_user_config_names()
+    if user_config_name not in user_config_names:
         if request.method == "GET":
-            flash(f"No such config: <{user_config_name}>", "danger")
-            return redirect(url_for("main.index"))
+            return make_response(
+                {
+                    "success": False,
+                    "messages": f"No such config: <{user_config_name}>",
+                    "config": {},
+                    "schema": {},
+                },
+                400,
+            )
         else:
             return {
                 "success": False,
                 "messages": [f"No such config: <{user_config_name}>"],
             }
     else:
+        user_config_object = current_config_editor.get_user_config(
+            user_config_name=user_config_name
+        )
         if request.method == "GET":
-            return render_template(
-                "index.html",
-                title=current_app.config["app_name"],
-                name_mod=(
-                    ".min" if current_app.config["USE_MINIFIED_STATIC_FILES"] else ""
-                ),
-                user_config_store=current_config_editor.config_store,
-                current_user_config_name=user_config_name,
+            return make_response(
+                {
+                    "success": True,
+                    "messages": [f"Config <{user_config_name}> found"],
+                    "config": user_config_object.get_config(),
+                    "schema": user_config_object.get_schema(),
+                },
+                200,
             )
         else:
             uploaded_config = request.json
@@ -64,15 +94,10 @@ def user_config_page(user_config_name):
                     200,
                 )
             else:
-                return make_response(
-                    {"success": False, "messages": res.get_messages()}, 400
-                )
-
-
-@main.route("/greetings")
-def greetings():
-    print("Hello, World!")
-    return render_template("index.html", title="Greetings")
+                messages = res.get_messages()
+                if len(messages) == 0:
+                    messages = ["Extra validation failed"]
+                return make_response({"success": False, "messages": messages}, 400)
 
 
 @main.route("/shutdown")
