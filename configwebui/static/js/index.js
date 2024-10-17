@@ -3,7 +3,7 @@ var params = {}
 //     params[key] = value
 //     console.log(key, value)
 // }
-schema = {
+var schema = {
     'title': 'Person',
     'type': 'object',
     'required': [
@@ -106,7 +106,7 @@ schema = {
         }
     }
 }
-var config = {
+const config = {
     use_name_attributes: false,
     iconlib: 'fontawesome5',
     theme: 'bootstrap4',
@@ -116,17 +116,16 @@ var config = {
     schema: schema
 }
 
-var editor = new JSONEditor(document.querySelector('#editor-container'), config)
+const editor = new JSONEditor(document.querySelector('#editor-container'), config)
 
 editor.on('change', function () {
     document.querySelector('#input').value = JSON.stringify(editor.getValue())
     document.querySelector('#get-params').textContent = JSON.stringify(editor.getValue(), null, 2)
 })
 
-function navigateToPage() {
-    var selectElement = document.getElementById("pageSelect");
-    var selectedValue = selectElement.value;
-
+function navigateToConfig() {
+    const selectElement = document.getElementById("configSelect");
+    const selectedValue = selectElement.value;
     if (selectedValue) {
         window.location.href = selectedValue;
     } else {

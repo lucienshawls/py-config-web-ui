@@ -1,5 +1,5 @@
 from . import ConfigEditor
-from flask import render_template, Blueprint, current_app, redirect, url_for
+from flask import render_template, Blueprint, current_app, redirect, url_for, flash
 
 main = Blueprint("main", __name__)
 
@@ -19,6 +19,10 @@ def user_config_page(user_config_name):
     user_config_names = current_config_editor.get_user_config_names()
     if user_config_name not in user_config_names:
         return redirect(url_for("main.index"))
+    flash("Message 1", "success")
+    flash("Message 2", "info")
+    flash("Message 3", "warning")
+    flash("Message 4", "danger")
     return render_template(
         "index.html",
         title=current_app.config["app_name"],

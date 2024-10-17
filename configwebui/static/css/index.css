@@ -4,6 +4,10 @@
     box-sizing: border-box;
 }
 
+#action-button-container {
+    padding: 0;
+}
+
 .menu-primary:hover {
     background-color: var(--primary);
     color: var(--white);
