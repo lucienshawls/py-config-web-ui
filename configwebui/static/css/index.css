@@ -1,5 +1,20 @@
-/* * {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-} */
+}
+
+.menu-primary:hover {
+    background-color: var(--primary);
+    color: var(--white);
+}
+
+.menu-success:hover {
+    background-color: var(--success);
+    color: var(--white);
+}
+
+.menu-danger:hover {
+    background-color: var(--danger);
+    color: var(--white);
+}

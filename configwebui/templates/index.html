@@ -3,9 +3,11 @@
 
 <head>
     <title>{{ title }}</title>
-    <link rel="stylesheet" type="text/css" href="static/css/bootstrap{{ name_mod }}.css">
-    <link rel="stylesheet" type="text/css" href="static/css/fontawesome.all.css">
-    <link rel="stylesheet" type="text/css" href="static/css/index.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/static/css/bootstrap{{ name_mod }}.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/fontawesome.all.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/index.css">
 </head>
 
 <body>
@@ -17,7 +19,7 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
-                <li class="nav-item w-100">
+                <li class="nav-item mx-1 w-100">
                     <select class="form-control w-100" id="pageSelect" onchange="navigateToPage()">
                         {% for user_config_name, user_config in user_config_store.items() %}
                         <option value="/{{ user_config_name }}" {% if user_config_name==current_user_config_name
@@ -26,17 +28,22 @@
                         {% endfor %}
                     </select>
                 </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Operations
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="">Action</a>
-                        <a class="dropdown-item" href="">Another action</a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="">Something else here</a>
-                    </div>
+                <li class="nav-item mx-1 btn-group">
+                    <button class="btn btn-primary" type="button">Save</button>
+                    <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" id="navbarDropdown"
+                        data-toggle="dropdown">
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><button class="dropdown-item menu-primary btn-primary" type="button">
+                                Save changes</button></li>
+                        <li><button class="dropdown-item menu-danger btn-danger" type="button" id="menu-discard">
+                                Discard changes</button></li>
+                        <li class="dropdown-divider"></li>
+                        <li><button class="dropdown-item menu-success btn-success" type="button">
+                                Launch main program</button></li>
+                        <li><button class="dropdown-item menu-danger btn-danger" type="button">
+                                Terminate editor</button></li>
+                    </ul>
                 </li>
             </ul>
         </div>
@@ -53,10 +60,10 @@
             <pre id="get-params"></pre>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim{{ name_mod }}.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle{{ name_mod }}.js"></script>
-    <script src="static/js/jsoneditor{{ name_mod }}.js"></script>
-    <script src="static/js/index.js"></script>
+    <script src="/static/js/jquery.slim{{ name_mod }}.js"></script>
+    <script src="/static/js/bootstrap.bundle{{ name_mod }}.js"></script>
+    <script src="/static/js/jsoneditor{{ name_mod }}.js"></script>
+    <script src="/static/js/index.js"></script>
 </body>
 
 </html>
