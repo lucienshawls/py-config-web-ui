@@ -8,6 +8,11 @@
     padding: 0;
 }
 
+.checkbox-heading::before,
+.checkbox-heading::after {
+    top: .75rem;
+}
+
 .menu-primary:hover {
     background-color: var(--primary);
     color: var(--white);

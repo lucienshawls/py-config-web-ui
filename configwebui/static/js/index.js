@@ -21,17 +21,23 @@ function changeCheckboxStyle() {
             input.className += " custom-control-input";
 
             const newLabel = document.createElement("label");
-            newLabel.className = "custom-control-label";
+            newLabel.className = "custom-control-label checkbox-plain";
             newLabel.setAttribute("for", input.id);
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'span') {
-            // parent.className = "custom-control custom-checkbox";
-            // input.className += " custom-control-input";
+            parent.className = "custom-control custom-checkbox d-inline-flex";
+            input.className += " custom-control-input";
 
-            // const newLabel = document.createElement("label");
-            // newLabel.className = "custom-control-label";
-            // newLabel.setAttribute("for", input.id);
-            // parent.insertBefore(newLabel, input.nextSibling);
+            const newLabel = document.createElement("label");
+            newLabel.className = "custom-control-label checkbox-heading";
+            newLabel.setAttribute("for", input.id);
+
+            parent.childNodes.forEach(child => {
+                if (child.nodeType === Node.TEXT_NODE && child.textContent.trim() !== "") {
+                    newLabel.appendChild(child);
+                }
+            });
+            parent.insertBefore(newLabel, input.nextSibling);
         }
     });
 }
@@ -92,7 +98,7 @@ async function initialize_editor() {
         iconlib: 'fontawesome5',
         theme: 'bootstrap4',
         show_opt_in: true,
-        disable_edit_json: true,
+        // disable_edit_json: true,
         disable_properties: true,
         disable_collapse: false,
         enforce_const: true,
@@ -112,5 +118,3 @@ async function initialize_editor() {
 }
 
 const editor = initialize_editor();
-{/* <label class="custom-control custom-checkbox" for=""><input type="checkbox" id="customCheck" class="custom-control-input"><label class="custom-control-label" for="customCheck">name</label>
-</label> */}
