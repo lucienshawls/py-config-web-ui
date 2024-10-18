@@ -1,5 +1,6 @@
 from configwebui import ConfigEditor, ResultStatus, UserConfig
 from pprint import pprint
+import time
 
 user_config_names = {
     "config1": "Config 1: this is a very long name that eats up a lot of space",
@@ -10,9 +11,11 @@ user_config_names = {
 schema = {
     "title": "Person",
     "type": "object",
-    # "required": ["name", "age", "date", "favorite_color", "gender", "location", "pets"],
+    "required": ["name", "age", "gender"],
+    # "additionalProperties": True,
     "properties": {
         "name": {
+            "title": "Write down your Name",
             "type": "string",
             "description": "First and Last name",
             "minLength": 4,
@@ -45,6 +48,14 @@ schema = {
                     "properties": {
                         "value": {"type": "integer", "default": 0},
                         "another_value": {"type": "integer", "default": 0},
+                        "te": {
+                            "type": "object",
+                            "title": "Test",
+                            "properties": {
+                                "st": {"type": "integer", "default": 0},
+                            },
+                        },
+                        "st": {"type": "integer", "default": 0},
                     },
                 },
             },
@@ -72,17 +83,38 @@ schema = {
 }
 
 
-def mycheck(config):
-    if config["value"] == 0:
-        return ResultStatus(True)
-    return ResultStatus(False, [])
+def always_fail(config):
+    return ResultStatus(False, ["msg1", "This always fails"])
 
 
+def always_pass(config):
+    return ResultStatus(True)
+
+
+def mysave(config):
+    # No blocking
+    time.sleep(3)
+    pprint(config)
+    return ResultStatus(True)
+
+
+# Initialize the ConfigEditor
 config_editor = ConfigEditor(app_name="Aurora Config Editor")
+
 for user_config_name, user_config_friendly_name in user_config_names.items():
-    config_editor.set_user_config(
-        user_config_name=user_config_name,
-        user_config_schema=schema,
-        user_config_friendly_name=user_config_friendly_name,
+    # Create a UserConfig object
+    user_config = UserConfig(
+        name=user_config_name,  # identifier
+        friendly_name=user_config_friendly_name,  # display name
+        schema=schema,  # schema
+        extra_validation_func=always_pass,  # extra validation function
+        save_func=mysave,  # save function
     )
+
+    # Add the UserConfig object to the ConfigEditor
+    config_editor.add_user_config(
+        user_config=user_config,
+    )
+
+# Launch the ConfigEditor!
 config_editor.run(host="localhost", port=80)

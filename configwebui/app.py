@@ -1,3 +1,4 @@
+import sys
 from . import ConfigEditor
 from flask import Blueprint
 from flask import flash, redirect, render_template, url_for, make_response
@@ -84,11 +85,12 @@ def user_config_api(user_config_name):
             )
             res = user_config_object.set_config(config=uploaded_config)
             if res.get_status():
+                user_config_object.save()
                 return make_response(
                     {
                         "success": True,
                         "messages": [
-                            f"[{user_config_object.get_friendly_name()}] has been saved"
+                            f'[<a href="/config/{user_config_name}">{user_config_object.get_friendly_name()}</a>] has been saved'
                         ],
                     },
                     200,

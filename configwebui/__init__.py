@@ -14,10 +14,11 @@ __url__ = "https://github.com/lucienshawls/py-config-web-ui"
 __description__ = "A simple web-based configuration editor for Python applications."
 __dependencies__ = ["Flask", "jsonschema"]
 __keywords__ = ["configuration", "editor", "web", "tool", "json", "yaml", "ui", "flask"]
-__all__ = ["ConfigEditor", "ResultStatus"]
+__all__ = ["ConfigEditor", "UserConfig", "ResultStatus"]
 
 
 import os
+import sys
 import signal
 import logging
 import threading
@@ -31,8 +32,14 @@ from copy import deepcopy
 DEBUG = True
 
 
-class ResultStatus:
+def run_with_normal_stdout(func: Callable, *args, **kwargs):
+    saved_stdout = sys.stdout
+    sys.stdout = sys.__stdout__
+    func(*args, **kwargs)
+    sys.stdout = saved_stdout
 
+
+class ResultStatus:
     def set_status(self, status: bool) -> None:
         self.status = bool(status)
 
@@ -79,72 +86,134 @@ class ResultStatus:
 
 
 class UserConfig:
+    DEFAULT_VALUE = {
+        "string": "",
+        "number": 0,
+        "integer": 0,
+        "boolean": False,
+        "null": None,
+    }
+
     @staticmethod
     def isvalid(config: dict | list = None) -> ResultStatus:
         return ResultStatus(True)
 
     @staticmethod
+    def save_config(config: dict | list) -> ResultStatus:
+        return ResultStatus(False, "Save function not implemented")
+
+    @staticmethod
     def add_order(schema: dict, property_order: int = 0) -> dict:
         ordered_schema = deepcopy(schema)
         ordered_schema["propertyOrder"] = property_order
-        if ordered_schema["type"] == "object":
-            for order, property in enumerate(ordered_schema["properties"]):
+        current_type = schema.get("type", None)
+        if current_type == "object":
+            for order, property in enumerate(ordered_schema.get("properties", {})):
+                if "." in property:
+                    raise ValueError(f"Property name cannot contain '.'")
                 ordered_schema["properties"][property] = UserConfig.add_order(
                     schema=schema["properties"][property], property_order=order
                 )
-        elif ordered_schema["type"] == "array":
+        elif current_type == "array":
             ordered_schema["items"] = UserConfig.add_order(
-                schema=schema["items"], property_order=0
+                schema=schema.get("items", {}), property_order=0
             )
         return ordered_schema
+
+    @staticmethod
+    def generate_default_json(schema: dict):
+        if "default" in schema:
+            return schema["default"]
+        if "enum" in schema:
+            return schema["enum"][0]
+        current_type = schema.get("type", None)
+        if current_type is None:
+            return {}
+        if schema["type"] == "object":
+            obj = {}
+            properties: dict = schema.get("properties", {})
+            required: list = schema.get("required", [])
+            for key, value in properties.items():
+                if key in required:
+                    obj[key] = UserConfig.generate_default_json(value)
+            return obj
+        elif schema["type"] == "array":
+            min_items = schema.get("minItems", 0)
+            return [
+                UserConfig.generate_default_json(schema["items"])
+                for _ in range(min_items)
+            ]
+        else:
+            if isinstance(current_type, list):
+                return UserConfig.DEFAULT_VALUE.get(current_type[0], None)
+            else:
+                return UserConfig.DEFAULT_VALUE.get(current_type, None)
 
     def check(
         self,
         config: dict | list,
-        schema: dict,
+        skip_schema_validations: bool = False,
         skip_extra_validations: bool = False,
     ) -> ResultStatus:
         result = ResultStatus(True)
-        try:
-            validate(instance=config, schema=schema)
-        except ValidationError as e:
+        if not (isinstance(config, list) or isinstance(config, dict)):
             result.set_status(False)
-            result.add_message(f"Schema validation error: {e.message}")
+            result.add_message(
+                f"config must be a dictionary or a list, not {type(config)}"
+            )
             return result
-        if skip_extra_validations:
-            return result
-        extra_validation_result = self.extra_validation_func(config)
-        if isinstance(extra_validation_result, ResultStatus):
-            return extra_validation_result
-        else:
-            result.set_status(bool(extra_validation_result))
-            return result
+        if not skip_schema_validations:
+            try:
+                validate(instance=config, schema=self.schema)
+            except ValidationError as e:
+                result.set_status(False)
+                result.add_message(f"Schema validation error: {e.message}")
+                return result
+        if not skip_extra_validations:
+            extra_validation_result = self.extra_validation_func(config)
+            if isinstance(extra_validation_result, ResultStatus):
+                return extra_validation_result
+            else:
+                if not bool(extra_validation_result):
+                    result.set_status(False)
+                    result.add_message("Extra validation failed")
+                    return result
+        return result
 
     def set_config(
         self,
         config: dict | list = None,
-        schema: dict = None,
+        skip_schema_validations: bool = False,
         skip_extra_validations: bool = False,
     ) -> ResultStatus:
         if config is None:
-            config = self.config
-        if schema is None:
-            schema = self.schema
+            config = UserConfig.generate_default_json(self.schema)
         if not (isinstance(config, list) or isinstance(config, dict)):
             raise TypeError(
                 f"config must be a dictionary or a list, not {type(config)}"
             )
-        if not isinstance(schema, dict):
-            raise TypeError(f"schema must be a dictionary, not {type(schema)}")
         result = self.check(
-            config=config, schema=schema, skip_extra_validations=skip_extra_validations
+            config=config,
+            skip_schema_validations=skip_schema_validations,
+            skip_extra_validations=skip_extra_validations,
         )
         if result.get_status():
             self.config = config
-            self.schema = UserConfig.add_order(schema)
             return ResultStatus(True)
         else:
             return result
+
+    def save(self):
+        thread = threading.Thread(
+            target=run_with_normal_stdout, args=(self.save_func, self.config)
+        )
+        thread.start()
+
+    def get_name(self) -> str:
+        return self.name
+
+    def get_friendly_name(self) -> str:
+        return self.friendly_name
 
     def get_schema(self) -> dict:
         return self.schema
@@ -152,14 +221,19 @@ class UserConfig:
     def get_config(self) -> dict | list:
         return self.config
 
-    def get_friendly_name(self) -> str:
-        return self.friendly_name
-
     def __init__(
         self,
+        name: str = "user_config",
         friendly_name: str = "User Config",
+        schema: dict = None,
         extra_validation_func: Callable = isvalid,
+        save_func: Callable = save_config,
     ) -> None:
+        if not isinstance(name, str):
+            raise TypeError(
+                f"friendly_name must be a string, not {type(friendly_name)}"
+            )
+        self.name = name
         if not isinstance(friendly_name, str):
             raise TypeError(
                 f"friendly_name must be a string, not {type(friendly_name)}"
@@ -170,8 +244,17 @@ class UserConfig:
                 f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
             )
         self.extra_validation_func = extra_validation_func
-        self.config: dict | list = {}
-        self.schema = {}
+        if not callable(save_func):
+            raise TypeError(
+                f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
+            )
+        self.save_func = save_func
+        if schema is None:
+            schema = {}
+        if not isinstance(schema, dict):
+            raise TypeError(f"schema must be a dictionary, not {type(schema)}")
+        self.schema = UserConfig.add_order(schema)
+        self.config = {}
 
 
 class ConfigEditor:
@@ -201,32 +284,19 @@ class ConfigEditor:
         else:
             raise KeyError(f"Config {user_config_name} not found")
 
-    def set_user_config(
+    def add_user_config(
         self,
-        user_config_name: str,
-        user_config_friendly_name: str = "User Config",
-        user_config: dict | list = None,
-        user_config_schema: dict = None,
-        extra_validation_func: Callable = UserConfig.isvalid,
-        skip_extra_validations: bool = True,
+        user_config: UserConfig,
+        replace: bool = False,
     ) -> None:
-        if not isinstance(user_config_name, str):
+        if not isinstance(user_config, UserConfig):
             raise TypeError(
-                f"user_config_name must be a string, not {type(user_config_name)}"
+                f"user_config must be a UserConfig object, not {type(user_config)}"
             )
-        current_user_config = UserConfig(
-            friendly_name=user_config_friendly_name,
-            extra_validation_func=extra_validation_func,
-        )
-        result = current_user_config.set_config(
-            config=user_config,
-            schema=user_config_schema,
-            skip_extra_validations=skip_extra_validations,
-        )
-        if not result.get_status():
-            raise ValueError(f"Invalid config. Details:\n{result}")
-
-        self.config_store[user_config_name] = current_user_config
+        user_config_name = user_config.get_name()
+        if user_config_name in self.config_store and not replace:
+            raise KeyError(f"Config {user_config_name} already exists")
+        self.config_store[user_config_name] = user_config
 
     def get_user_config_names(self) -> list[str]:
         return list(self.config_store.keys())

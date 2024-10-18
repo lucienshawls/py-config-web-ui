@@ -1,7 +1,19 @@
+var editor;
+var myschema;
+const pathName = window.location.pathname;
+const configRoot = pathName.split('/').pop();
+const statusBarElement = document.querySelector('#status-bar');
+const statusIconElement = document.querySelector('#status-icon');
+
 function flashMessage(message, category) {
     const flashMessageElement = document.querySelector('#flash-messages');
-    const messageHTML = `<div class="alert alert-${category}"><button type="button" class="close" data-dismiss="alert">&times;</button>${message}</div>`;
+    const messageHTML = `<div class="alert alert-${category}"><button type="button" class="close" data-dismiss="alert">&times;</button><span>${message}</span></div>`;
     flashMessageElement.insertAdjacentHTML('beforeend', messageHTML);
+    window.scroll({
+        top: 0,
+        behavior: 'smooth' // 平滑滚动
+    });
+    return messageHTML;
 }
 
 function clearFlashMessage() {
@@ -9,28 +21,27 @@ function clearFlashMessage() {
     flashMessageElement.innerHTML = '';
 }
 
-function changeCheckboxStyle() {
+function changeCheckboxStyleBootstrap4() {
     const container = document.querySelector("#editor-container");
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
 
     checkboxes.forEach(input => {
         const parent = input.parentElement;
+        const newLabel = document.createElement("label");
+        newLabel.setAttribute("for", input.id);
+        input.className += " custom-control-input";
+
+        if (parent.classList.contains('custom-control') && parent.classList.contains('custom-checkbox')) {
+            return;
+        }
         if (parent.tagName.toLowerCase() === 'label') {
             parent.removeAttribute('for');
             parent.className = "custom-control custom-checkbox";
-            input.className += " custom-control-input";
-
-            const newLabel = document.createElement("label");
             newLabel.className = "custom-control-label checkbox-plain";
-            newLabel.setAttribute("for", input.id);
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'span') {
             parent.className = "custom-control custom-checkbox d-inline-flex";
-            input.className += " custom-control-input";
-
-            const newLabel = document.createElement("label");
             newLabel.className = "custom-control-label checkbox-heading";
-            newLabel.setAttribute("for", input.id);
 
             parent.childNodes.forEach(child => {
                 if (child.nodeType === Node.TEXT_NODE && child.textContent.trim() !== "") {
@@ -38,7 +49,34 @@ function changeCheckboxStyle() {
                 }
             });
             parent.insertBefore(newLabel, input.nextSibling);
+        } else if (parent.tagName.toLowerCase() === 'b') {
+            parent.className = "custom-control custom-checkbox user-add";
+            newLabel.className = "custom-control-label checkbox-plain";
+
+            parent.insertBefore(newLabel, input.nextSibling);
+
+            const newParent = document.createElement('label');
+            while (parent.firstChild) {
+                newParent.appendChild(parent.firstChild);
+            }
+            Array.from(parent.attributes).forEach(attr => {
+                newParent.setAttribute(attr.name, attr.value);
+            });
+            parent.replaceWith(newParent);
         }
+    });
+}
+
+function changeCheckboxStyle() {
+    changeCheckboxStyleBootstrap4();
+    const container = document.querySelector("#editor-container");
+    const saveButtons = container.querySelectorAll('.json-editor-btntype-save');
+    saveButtons.forEach(button => {
+        button.addEventListener('click', changeCheckboxStyleBootstrap4);
+    });
+    const addButtons = container.querySelectorAll('.json-editor-btntype-add');
+    addButtons.forEach(button => {
+        button.addEventListener('click', changeCheckboxStyleBootstrap4);
     });
 }
 
@@ -52,28 +90,51 @@ function navigateToConfig() {
     }
 }
 
+
+
 async function getConfigAndSchema() {
     var res = {};
     const pathName = window.location.pathname;
     try {
         const response = await fetch('/api' + pathName, { method: 'GET' });
         const data = await response.json();
-        console.log('Success:', data);
         res.config = data.config;
         res.schema = data.schema;
+        if (data.success) {
+            statusIconElement.className = 'spinner-border text-success';
+        }
+        else {
+            statusIconElement.className = 'spinner-border text-danger';
+            flashMessage('Failed to get config from server', 'danger');
+        }
     }
     catch (error) {
-        console.error('Error:', error);
+        flashMessage('Failed to get config from server', 'danger');
+        statusIconElement.className = 'spinner-border text-danger';
     }
     return res;
 }
 
 async function saveConfig() {
     clearFlashMessage();
-    const pathName = window.location.pathname;
-    const configValue = document.querySelector('#input').value;
+    // Validate the editor's current value against the schema
+    const errors = editor.validate();
+
+    if (errors.length) {
+        errors.forEach(error => {
+            const parts = error.path.split('.');
+            const result = parts.map((part, index) => {
+                return index >= 1 ? `[${part}]` : part;
+            });
+
+            const href = result.join('');
+            flashMessage(`Property "<b>${error.property}</b>" unsatisfied at {<a href="#${href}" class="alert-link">${error.path}</a>}: ${error.message}`, 'danger');
+        });
+        return;
+    }
+    const configValue = JSON.stringify(editor.getValue());
     try {
-        const response = await fetch('/api' + pathName, {
+        const response = await fetch(`/api${pathName}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -81,40 +142,66 @@ async function saveConfig() {
             body: configValue
         });
         const data = await response.json();
-        console.log('Success:', data);
-        flashMessage('Save success', 'success');
+        var messageCategory;
+        if (data.success) {
+            messageCategory = 'success';
+        } else {
+            messageCategory = 'danger';
+        }
+        for (const message of data.messages) {
+            flashMessage(message, messageCategory);
+        }
+
     } catch (error) {
-        console.error('Error:', error);
-        flashMessage('Save failed due to error', 'danger');
+        flashMessage('Failed to save config. Checkout your python program.', 'danger');
     }
 }
 
-async function initialize_editor() {
+
+async function reload() {
     const configAndSchema = await getConfigAndSchema();
-    const myschema = configAndSchema.schema;
+    editor.setValue(configAndSchema.config);
+}
+
+async function initialize_editor() {
+    statusIconElement.className = 'spinner-border text-primary';
+    statusBarElement.style.display = 'block';
+    const configAndSchema = await getConfigAndSchema();
+    myschema = configAndSchema.schema;
     const myconfig = configAndSchema.config;
     const jsonEditorConfig = {
-        use_name_attributes: false,
+        form_name_root: configRoot,
         iconlib: 'fontawesome5',
         theme: 'bootstrap4',
         show_opt_in: true,
-        // disable_edit_json: true,
+        disable_edit_json: true,
         disable_properties: true,
         disable_collapse: false,
+        enable_array_copy: true,
+        // no_additional_properties: true,
         enforce_const: true,
         startval: myconfig,
         schema: myschema
     };
 
-    const editor = new JSONEditor(document.querySelector('#editor-container'), jsonEditorConfig);
+    editor = new JSONEditor(document.querySelector('#editor-container'), jsonEditorConfig);
     editor.on('change', function () {
-        document.querySelector('#input').value = JSON.stringify(editor.getValue());
-        document.querySelector('#get-params').textContent = JSON.stringify(editor.getValue(), null, 2);
+        document.querySelector('#json-preview').textContent = JSON.stringify(editor.getValue(), null, 2);
     });
     editor.on('ready', function () {
         changeCheckboxStyle();
+        statusBarElement.style.display = 'none';
     });
-    return editor;
 }
 
-const editor = initialize_editor();
+initialize_editor();
+
+const saveActionButtons = document.querySelectorAll('.save-action');
+saveActionButtons.forEach(button => {
+    button.addEventListener('click', saveConfig);
+});
+
+const resetActionButtons = document.querySelectorAll('.reset-action');
+resetActionButtons.forEach(button => {
+    button.addEventListener('click', reload);
+});
