@@ -36,9 +36,6 @@ def user_config_page(user_config_name):
         return render_template(
             "index.html",
             title=current_app.config["app_name"],
-            name_mod=(
-                ".min" if current_app.config["USE_MINIFIED_STATIC_FILES"] else ""
-            ),
             user_config_store=current_config_editor.config_store,
             current_user_config_name=user_config_name,
         )
