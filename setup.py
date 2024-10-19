@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import download_static_files
 from configwebui import (
     __version__,
     __author__,
@@ -10,19 +9,17 @@ from configwebui import (
     __dependencies__,
 )
 
-download_static_files.download_files()
-with open("README.md", "r") as f:
-    long_description = f.read()
+PACKAGE_NAME = "config-web-ui-lucien"
 
 setup(
-    name="config-web-ui-lucien",
+    name=PACKAGE_NAME,
     version=__version__,
     author=__author__,
     author_email=__email__,
     url=__url__,
     license=__license__,
     description=__description__,
-    long_description=long_description,
+    long_description=open("README.md", "r").read(),
     long_description_content_type="text/markdown",
     classifiers=[
         "Intended Audience :: Developers",
