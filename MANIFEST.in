@@ -1,2 +1,3 @@
-include configwebui/static/*
+recursive-include configwebui/static *
 include configwebui/templates/*
+exclude utils/*
