@@ -9,7 +9,7 @@ from configwebui import (
     __dependencies__,
 )
 
-PACKAGE_NAME = "config-web-ui-lucien"
+PACKAGE_NAME = "configwebui-lucien"
 
 setup(
     name=PACKAGE_NAME,
