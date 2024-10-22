@@ -1,18 +1,6 @@
 # Tests
 test*
 
-# json-editor
-configwebui/static/js/jsoneditor*
-
-# bootstrap
-configwebui/static/js/jquery*
-configwebui/static/js/bootstrap*
-configwebui/static/css/bootstrap*
-
-# fontawesome
-configwebui/static/css/fontawesome*
-configwebui/static/webfonts
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
