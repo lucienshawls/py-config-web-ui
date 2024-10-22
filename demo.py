@@ -98,9 +98,17 @@ def mysave(config):
     return ResultStatus(True)
 
 
-# Initialize the ConfigEditor
-config_editor = ConfigEditor(app_name="Aurora Config Editor")
+def my_main_entry():
+    print("This is the main entry point. Make sure it can run in a thread.")
 
+
+# 1. Initialize the Config Editor
+config_editor = ConfigEditor(
+    app_name="Aurora Config Editor",  # display name, is used in the webpage title
+    main_entry=my_main_entry,  # main entry point, make sure it can run in a thread.
+)
+
+# 2. Add UserConfig objects to the Config Editor
 for user_config_name, user_config_friendly_name in user_config_names.items():
     # Create a UserConfig object
     user_config = UserConfig(
@@ -116,5 +124,7 @@ for user_config_name, user_config_friendly_name in user_config_names.items():
         user_config=user_config,
     )
 
-# Launch the ConfigEditor!
+# 3. Launch the Config Editor!
 config_editor.run(host="localhost", port=80)
+
+print("Config Editor is terminated.")

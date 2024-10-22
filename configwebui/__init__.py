@@ -18,25 +18,20 @@ __all__ = ["ConfigEditor", "UserConfig", "ResultStatus"]
 
 
 import os
-import sys
-import signal
+import time
 import logging
 import threading
-import contextlib
 import webbrowser
 from flask import Flask
-from collections.abc import Callable
-from jsonschema import validate, ValidationError
 from copy import deepcopy
+from collections.abc import Callable
+from socket import setdefaulttimeout
+from werkzeug.serving import make_server
+from jsonschema import validate, ValidationError
 
-DEBUG = True
-
-
-def run_with_normal_stdout(func: Callable, *args, **kwargs):
-    saved_stdout = sys.stdout
-    sys.stdout = sys.__stdout__
-    func(*args, **kwargs)
-    sys.stdout = saved_stdout
+SERVER_TIMEOUT = 3
+DAEMON_CHECK_INTERVAL = 1
+logging.getLogger("werkzeug").disabled = True
 
 
 class ResultStatus:
@@ -95,12 +90,12 @@ class UserConfig:
     }
 
     @staticmethod
-    def isvalid(config: dict | list = None) -> ResultStatus:
+    def default_extra_validation_func(config: dict | list = None) -> ResultStatus:
         return ResultStatus(True)
 
     @staticmethod
-    def save_config(config: dict | list) -> ResultStatus:
-        return ResultStatus(False, "Save function not implemented")
+    def default_save_func(config: dict | list) -> ResultStatus:
+        return ResultStatus(False, "Save function is undefined")
 
     @staticmethod
     def add_order(schema: dict, property_order: int = 0) -> dict:
@@ -203,11 +198,8 @@ class UserConfig:
         else:
             return result
 
-    def save(self):
-        thread = threading.Thread(
-            target=run_with_normal_stdout, args=(self.save_func, self.config)
-        )
-        thread.start()
+    def save(self) -> None:
+        threading.Thread(target=self.save_func, args=(self.config,)).start()
 
     def get_name(self) -> str:
         return self.name
@@ -226,8 +218,8 @@ class UserConfig:
         name: str = "user_config",
         friendly_name: str = "User Config",
         schema: dict = None,
-        extra_validation_func: Callable = isvalid,
-        save_func: Callable = save_config,
+        extra_validation_func: Callable = default_extra_validation_func,
+        save_func: Callable = default_save_func,
     ) -> None:
         if not isinstance(name, str):
             raise TypeError(
@@ -258,10 +250,24 @@ class UserConfig:
 
 
 class ConfigEditor:
-    def __init__(self, app_name: str = "Config Editor") -> None:
+    @staticmethod
+    def default_main_entry() -> None:
+        return ResultStatus(False, "Main entry is undefined")
+
+    def __init__(
+        self, app_name: str = "Config Editor", main_entry: Callable = default_main_entry
+    ) -> None:
         from . import app
         from .config import AppConfig
 
+        if not isinstance(app_name, str):
+            raise TypeError(f"app_name must be a string, not {type(app_name)}")
+        if not callable(main_entry):
+            raise TypeError(
+                f"main_entry must be a callable function, not {type(main_entry)}"
+            )
+        self.running = False
+        self.main_entry = main_entry
         self.config_store: dict[str, UserConfig] = {}
 
         flask_app = Flask(
@@ -274,7 +280,6 @@ class ConfigEditor:
         flask_app.config["app_name"] = app_name
         flask_app.config["ConfigEditor"] = self
         flask_app.register_blueprint(app.main)
-        flask_app.debug = DEBUG
 
         self.app = flask_app
 
@@ -307,8 +312,14 @@ class ConfigEditor:
         else:
             raise KeyError(f"Config {user_config_name} not found")
 
-    def stop(self) -> None:
-        os.kill(os.getpid(), signal.SIGINT)
+    def launch_main_entry(self) -> None:
+        threading.Thread(target=self.main_entry).start()
+
+    def stop_server(self) -> None:
+        self.running = False
+
+    def start_server(self) -> None:
+        self.server.serve_forever()
 
     def run(self, host="localhost", port=80) -> None:
         url = (
@@ -319,9 +330,21 @@ class ConfigEditor:
         print(f"Config Editor URL: {url}")
         print("Open the above link in your browser if it does not pop up.")
         print("\nPress Ctrl+C to stop.")
-        if not DEBUG:
+        if not self.app.config["DEBUG"]:
             threading.Timer(1, lambda: webbrowser.open(url)).start()
-        with contextlib.redirect_stdout(open(os.devnull, "w")):
-            logging.getLogger("werkzeug").disabled = True
-            self.app.run(host=host, port=port, use_reloader=DEBUG)
-        self.stop()
+        setdefaulttimeout(SERVER_TIMEOUT)
+        self.server = make_server(host, port, self.app)
+
+        server_thread = threading.Thread(target=self.start_server)
+        server_thread.start()
+        self.running = True
+        while self.running:
+            try:
+                time.sleep(DAEMON_CHECK_INTERVAL)
+            except KeyboardInterrupt:
+                if self.running:
+                    self.stop_server()
+        print("Please wait for the server to stop...")
+        self.server.shutdown()
+        server_thread.join()
+        print("Server stopped.")

@@ -99,10 +99,18 @@ def user_config_api(user_config_name):
                 return make_response({"success": False, "messages": messages}, 400)
 
 
-@main.route("/shutdown")
+@main.route("/api/launch")
+def launch():
+    current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
+    current_config_editor.launch_main_entry()
+    return make_response("", 204)
+
+
+@main.route("/api/shutdown")
 def shutdown():
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
-    current_config_editor.stop()
+    current_config_editor.stop_server()
+    return make_response("", 204)
 
 
 @main.route("/<path:path>")

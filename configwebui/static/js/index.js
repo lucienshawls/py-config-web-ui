@@ -153,21 +153,46 @@ async function saveConfig() {
         }
 
     } catch (error) {
-        flashMessage('Failed to save config. Checkout your python program.', 'danger');
+        flashMessage('Failed to save config. Checkout your python backend.', 'danger');
     }
 }
 
 
 async function reload() {
+    clearFlashMessage();
     const configAndSchema = await getConfigAndSchema();
     editor.setValue(configAndSchema.config);
+}
+
+async function launch() {
+    clearFlashMessage();
+    try {
+        flashMessage("Trying to launch the main program.", "info");
+        await fetch(`/api/launch`, {
+            method: 'GET',
+        });
+    } catch (error) {
+        flashMessage('Failed to launch the main program. Check your python backend.', 'danger');
+    }
+}
+
+async function terminate() {
+    clearFlashMessage();
+    try {
+        flashMessage("Trying to terminate the editor backend. Subsequent changes will not be saved.", "warning");
+        await fetch(`/api/shutdown`, {
+            method: 'GET',
+        });
+    } catch (error) {
+        flashMessage('Failed to terminate the editor backend. Maybe it is already terminated.', 'danger');
+    }
 }
 
 async function initialize_editor() {
     statusIconElement.className = 'spinner-border text-primary';
     statusBarElement.style.display = 'block';
     const configAndSchema = await getConfigAndSchema();
-    myschema = configAndSchema.schema;
+    const myschema = configAndSchema.schema;
     const myconfig = configAndSchema.config;
     const jsonEditorConfig = {
         form_name_root: configRoot,
@@ -178,7 +203,7 @@ async function initialize_editor() {
         disable_properties: true,
         disable_collapse: false,
         enable_array_copy: true,
-        // no_additional_properties: true,
+        no_additional_properties: true,
         enforce_const: true,
         startval: myconfig,
         schema: myschema
@@ -204,4 +229,14 @@ saveActionButtons.forEach(button => {
 const resetActionButtons = document.querySelectorAll('.reset-action');
 resetActionButtons.forEach(button => {
     button.addEventListener('click', reload);
+});
+
+const launchActionButtons = document.querySelectorAll('.launch-action');
+launchActionButtons.forEach(button => {
+    button.addEventListener('click', launch);
+});
+
+const terminateActionButtons = document.querySelectorAll('.terminate-action');
+terminateActionButtons.forEach(button => {
+    button.addEventListener('click', terminate);
 });
