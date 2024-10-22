@@ -1,6 +1,10 @@
 # Tests
 test*
 
+# Examples
+examples/config/*
+!examples/config/.gitkeep
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,6 +1,18 @@
+# This is a demo of how to use the Config Editor
+
+# ============== You won't need the code below ============== #
+import os
+import sys
+
+EXAMPLE_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(EXAMPLE_DIRECTORY))
+# ============== You won't need the code above ============== #
+
 from configwebui import ConfigEditor, ResultStatus, UserConfig
 from pprint import pprint
 import time
+import json
+
 
 user_config_names = {
     "config1": "Config 1: this is a very long name that eats up a lot of space",
@@ -8,98 +20,47 @@ user_config_names = {
     "config3": "Config 3: short name",
 }
 
-schema = {
-    "title": "Person",
-    "type": "object",
-    "required": ["name", "age", "gender"],
-    # "additionalProperties": True,
-    "properties": {
-        "name": {
-            "title": "Write down your Name",
-            "type": "string",
-            "description": "First and Last name",
-            "minLength": 4,
-            "default": "Jeremy Dorn",
-        },
-        "age": {"type": "integer", "default": 25, "minimum": 18, "maximum": 99},
-        "favorite_color": {
-            "type": "string",
-            "format": "color",
-            "title": "favorite color",
-            "default": "#ffa500",
-        },
-        "gender": {"type": "string", "enum": ["male", "female", "other"]},
-        "date": {"type": "string", "format": "date", "options": {"flatpickr": {}}},
-        "location": {
-            "type": "object",
-            "title": "Location",
-            "properties": {
-                "city": {"type": "string", "default": "San Francisco"},
-                "state": {"type": "string", "default": "CA"},
-                "citystate": {
-                    "type": "string",
-                    "description": "This is generated automatically from the previous two fields",
-                    "template": "{{city}}, {{state}}",
-                    "watch": {"city": "location.city", "state": "location.state"},
-                },
-                "test": {
-                    "type": "object",
-                    "title": "Test",
-                    "properties": {
-                        "value": {"type": "integer", "default": 0},
-                        "another_value": {"type": "integer", "default": 0},
-                        "te": {
-                            "type": "object",
-                            "title": "Test",
-                            "properties": {
-                                "st": {"type": "integer", "default": 0},
-                            },
-                        },
-                        "st": {"type": "integer", "default": 0},
-                    },
-                },
-            },
-        },
-        "pets": {
-            "type": "array",
-            "format": "table",
-            "title": "Pets",
-            "uniqueItems": True,
-            "items": {
-                "type": "object",
-                "title": "Pet",
-                "properties": {
-                    "type": {
-                        "type": "string",
-                        "enum": ["cat", "dog", "bird", "reptile", "other"],
-                        "default": "dog",
-                    },
-                    "name": {"type": "string"},
-                },
-            },
-            "default": [{"type": "dog", "name": "Walter"}],
-        },
-    },
-}
+# 0. Prepare the schema, save functions and extra validation functions
+with open(f"{EXAMPLE_DIRECTORY}/schema/general.json", "r", encoding="utf-8") as f:
+    schema = json.load(f)
 
 
-def always_fail(config):
-    return ResultStatus(False, ["msg1", "This always fails"])
+# def always_fail(config) -> ResultStatus:
+#     return ResultStatus(False, ["msg1", "This always fails"])
 
 
-def always_pass(config):
+def always_pass(config) -> ResultStatus:
     return ResultStatus(True)
 
 
-def mysave(config):
+def mysave(name: str, config: dict | list) -> ResultStatus:
+    # You don't need to perform parameter validation
+    with open(f"{EXAMPLE_DIRECTORY}/config/{name}.json", "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=4)
+    pprint(config)
     # No blocking
     time.sleep(3)
-    pprint(config)
     return ResultStatus(True)
+
+
+def load_config(name: str) -> dict | list:
+    file_path = f"{EXAMPLE_DIRECTORY}/config/{name}.json"
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    else:
+        config = None
+    return config
 
 
 def my_main_entry():
-    print("This is the main entry point. Make sure it can run in a thread.")
+    print("\nThis is the main entry point. Make sure it can run in a thread.")
+    for user_config_name in user_config_names:
+        file_path = f"{EXAMPLE_DIRECTORY}/config/{user_config_name}.json"
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            print(f'{config["name"]} is {config["age"]} years old.')
 
 
 # 1. Initialize the Config Editor
@@ -118,6 +79,15 @@ for user_config_name, user_config_friendly_name in user_config_names.items():
         extra_validation_func=always_pass,  # extra validation function
         save_func=mysave,  # save function
     )
+
+    # Load the config from file and set initial values (or not, as you wish)
+    config_from_file = load_config(user_config_name)
+    if config_from_file is not None:
+        user_config.set_config(
+            config=config_from_file,
+            skip_extra_validations=True,
+            skip_schema_validations=True,
+        )
 
     # Add the UserConfig object to the ConfigEditor
     config_editor.add_user_config(

@@ -167,7 +167,7 @@ async function reload() {
 async function launch() {
     clearFlashMessage();
     try {
-        flashMessage("Trying to launch the main program.", "info");
+        flashMessage("Trying to launch the main program. Go back and check out your terminal.", "info");
         await fetch(`/api/launch`, {
             method: 'GET',
         });
