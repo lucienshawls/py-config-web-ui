@@ -29,9 +29,9 @@ jobs:
           pip install -r requirements.txt
           python setup.py sdist bdist_wheel
 
-      - name: Get tag name without 'v'
+      - name: Get version
         run: |
-          echo VERSION="${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+          echo VERSION="$(python -c 'from configwebui import __version__; print(__version__)')" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         id: create_release
