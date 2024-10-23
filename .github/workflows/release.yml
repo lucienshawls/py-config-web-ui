@@ -30,8 +30,9 @@ jobs:
           python setup.py sdist bdist_wheel
 
       - name: Get the package version
+        id: get_version
         run: |
-          echo VERSION="$(python -c 'from configwebui import __version__; print(__version__)')" >> $GITHUB_ENV
+          echo version="$(python -c 'from configwebui import __version__; print(__version__)')" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         id: create_release
@@ -49,6 +50,7 @@ jobs:
       - name: Upload distribution files to GitHub Release (whl)
         uses: actions/upload-release-asset@v1
         env:
+          VERSION: ${{ steps.get_version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -59,6 +61,7 @@ jobs:
       - name: Upload source tarball to GitHub Release
         uses: actions/upload-release-asset@v1
         env:
+          VERSION: ${{ steps.get_version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
