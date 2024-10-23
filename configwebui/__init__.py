@@ -94,7 +94,7 @@ class UserConfig:
         return ResultStatus(True)
 
     @staticmethod
-    def default_save_func(name: str, config: dict | list) -> ResultStatus:
+    def default_save_func(config: dict | list) -> ResultStatus:
         return ResultStatus(False, "Save function is undefined")
 
     @staticmethod
@@ -199,7 +199,7 @@ class UserConfig:
             return result
 
     def save(self) -> None:
-        threading.Thread(target=self.save_func, args=(self.name, self.config)).start()
+        threading.Thread(target=self.save_func, args=(self.config,)).start()
 
     def get_name(self) -> str:
         return self.name
