@@ -1,0 +1,4 @@
+recursive-include configwebui/static *
+include configwebui/templates/*
+exclude utils/*
+exclude examples/*

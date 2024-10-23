@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <title>{{ title }}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/fontawesome.all.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/index.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
+        <a class="navbar-brand">{{ title }}</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item mx-1 w-100">
+                    <select class="form-control w-100" id="configSelect" onchange="navigateToConfig()">
+                        {% for user_config_name, user_config in user_config_store.items() %}
+                        <option value="/config/{{ user_config_name }}" {% if user_config_name==current_user_config_name
+                            %}selected{% endif %}>{{
+                            user_config.get_friendly_name() }}</option>
+                        {% endfor %}
+                    </select>
+                </li>
+                <li class="nav-item mx-1 btn-group">
+                    <button class="btn btn-primary save-action" type="button">Save</button>
+                    <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" id="navbarDropdown"
+                        data-toggle="dropdown">
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><button class="dropdown-item menu-primary btn-primary save-action" type="button">
+                                Save changes</button></li>
+                        <li><button class="dropdown-item menu-danger btn-danger reset-action" type="button"
+                                id="menu-discard">
+                                Reset</button></li>
+                        <li class="dropdown-divider"></li>
+                        <li><button class="dropdown-item menu-success btn-success launch-action" type="button">
+                                Launch main program</button></li>
+                        <li><button class="dropdown-item menu-danger btn-danger terminate-action" type="button">
+                                Terminate editor</button></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="mt-2" id="status-container">
+        <div class="container col-md-8" id="status-info">
+            <div class="alert alert-light" id="status-bar">
+                <div class="spinner-border text-primary" role="status" id="status-icon"></div>
+            </div>
+        </div>
+    </div>
+    <div id="flash-container">
+        <div class="container col-md-8" id="flash-messages">
+            {% for category, message in get_flashed_messages(with_categories=true) %}
+            <div class="alert alert-{{ category }}">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                <span>{{ message }}</apan>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="container col-md-8">
+        <div id='editor-container'></div>
+
+        <div class="d-flex float-right justify-content-end col-md-2" id="action-button-container">
+            <button class="btn btn-primary w-100 save-action" type="button">Save</button>
+            <div class="mx-1"></div>
+            <button class="btn btn-danger w-100 reset-action" type="button">Reset</button>
+        </div>
+        <h2>Preview json</h2>
+        <textarea id="json-preview" class="form-control" disabled></textarea>
+    </div>
+    <script src="/static/js/jquery.slim.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/jsoneditor.min.js"></script>
+    <script src="/static/js/index.js"></script>
+</body>
+
+</html>

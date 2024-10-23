@@ -1,0 +1,47 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+.form-control {
+    scroll-margin-top: 10rem;
+}
+
+#action-button-container {
+    padding: 0;
+}
+
+#json-preview {
+    font-family: monospace;
+    height: 25rem;
+}
+
+.checkbox-heading::before,
+.checkbox-heading::after {
+    top: .75rem;
+}
+
+.user-add {
+    display: inline-block;
+    font-weight: bolder;
+}
+
+.menu-primary:hover {
+    background-color: var(--primary);
+    color: var(--white);
+}
+
+.menu-success:hover {
+    background-color: var(--success);
+    color: var(--white);
+}
+
+.menu-danger:hover {
+    background-color: var(--danger);
+    color: var(--white);
+}
