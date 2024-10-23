@@ -5,7 +5,7 @@ A simple web-based configuration editor for Python applications.
 This package provides tools for editing configuration files
 in a user-friendly web interface.
 
-# Try it out
+## Try it out
 To get an intuitive understanding of how to use this tool, you can do the following:
 
 1. Clone this repository
@@ -34,7 +34,7 @@ If your browser does not pop up, visit the link that shows in your terminal.
 
 It should output some messages based on your config.
 
-# Use it in your own project
+## Use it in your own project
 1. Install
 
 In the environment of your own project, run:
@@ -195,7 +195,7 @@ Example:
 config_editor.run(host="localhost", port=80)
 ```
 
-# Acknowledgements
+## Acknowledgements
 - Front-end design:
   - JSON Editor: [JSON Schema Based Editor](https://github.com/json-editor/json-editor)
   - CSS: [Bootstrap · The most popular HTML, CSS, and JS library in the world.](https://getbootstrap.com/)
