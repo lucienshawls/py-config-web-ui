@@ -12,18 +12,22 @@ html {
     scroll-margin-top: 10rem;
 }
 
-#action-button-container {
-    padding: 0;
+.editor-check-input {
+    position: relative;
+    top: .3rem;
 }
 
-#json-preview {
-    font-family: monospace;
-    height: 25rem;
+.editor-check {
+    padding-left: 0;
 }
 
-.checkbox-heading::before,
-.checkbox-heading::after {
-    top: .75rem;
+.je-switcher {
+    padding: .25rem 2.25rem .25rem .75rem !important;
+    margin-bottom: .25rem !important;
+}
+
+.card-title {
+    margin-bottom: 0;
 }
 
 .user-add {
@@ -31,17 +35,52 @@ html {
     font-weight: bolder;
 }
 
+/* small */
+@media (max-width: 992px) {
+    #action-dropdown-group {
+        width: 100%;
+    }
+
+    #action-container-group>button {
+        width: 40%;
+    }
+}
+
+/* large */
+@media (min-width: 992px) {
+    #action-dropdown-group {
+        width: auto;
+    }
+
+    #action-container-group>button {
+        width: 12%;
+    }
+}
+
 .menu-primary:hover {
-    background-color: var(--primary);
-    color: var(--white);
+    background-color: var(--bs-primary);
+    color: var(--bs-white);
 }
 
 .menu-success:hover {
-    background-color: var(--success);
-    color: var(--white);
+    background-color: var(--bs-success);
+    color: var(--bs-white);
 }
 
 .menu-danger:hover {
-    background-color: var(--danger);
-    color: var(--white);
+    background-color: var(--bs-danger);
+    color: var(--bs-white);
+}
+
+.btn-close {
+    transform: scale(0.75);
+}
+
+#action-container-group {
+    padding: 0;
+}
+
+#json-preview {
+    font-family: monospace;
+    height: 25rem;
 }
