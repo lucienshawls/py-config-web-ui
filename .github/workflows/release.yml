@@ -1,4 +1,4 @@
-name: Release and Publish
+name: Build
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  release_and_publish:
-    name: Release and Publish
+  build_and_publish:
+    name: Build and Publish
     runs-on: ubuntu-latest
     environment: release
     permissions:

@@ -1,9 +1,16 @@
 # pyConfigWebUI
 
+![Build Status](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml/badge.svg)
+![License](https://img.shields.io/github/license/lucienshawls/py-config-web-ui)
+![Latest Release Tag](https://img.shields.io/github/v/release/lucienshawls/py-config-web-ui)
+![Latest PyPI Version](https://img.shields.io/pypi/v/configwebui-lucien.svg)
+
 A simple web-based configuration editor for Python applications.
 
 This package provides tools for editing configuration files
 in a user-friendly web interface.
+
+Package on PyPI: [configwebui-lucien · PyPI](https://pypi.org/project/configwebui-lucien/)
 
 ## Try it out
 To get an intuitive understanding of how to use this tool, you can do the following:
