@@ -207,3 +207,6 @@ config_editor.run(host="localhost", port=80)
   - JSON Editor: [JSON Schema Based Editor](https://github.com/json-editor/json-editor)
   - CSS: [Bootstrap · The most popular HTML, CSS, and JS library in the world.](https://getbootstrap.com/)
   - Icons: [Font Awesome](https://fontawesome.com/)
+- Coding
+  - Testing: [Eric](https://github.com/EricWay1024)
+  - Assistant: [ChatGPT](https://chatgpt.com/)
