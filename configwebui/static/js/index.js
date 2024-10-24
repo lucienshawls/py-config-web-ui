@@ -7,7 +7,7 @@ const statusIconElement = document.querySelector('#status-icon');
 
 function flashMessage(message, category) {
     const flashMessageElement = document.querySelector('#flash-messages');
-    const messageHTML = `<div class="alert alert-${category}"><button type="button" class="close" data-dismiss="alert">&times;</button><span>${message}</span></div>`;
+    const messageHTML = `<div class="alert alert-${category} alert-dismissible fade show" role="alert"><div>${message}</div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
     flashMessageElement.insertAdjacentHTML('beforeend', messageHTML);
     window.scroll({
         top: 0,
@@ -26,23 +26,33 @@ function changeCheckboxStyle() {
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
 
     checkboxes.forEach(input => {
+        if (input.parentElement.tagName.toLowerCase() === 'span' && input.parentElement.attributes.length === 0) {
+            // Get it out of span
+            const parentSpan = input.parentElement;
+            const parentOfParent = parentSpan.parentElement;
+            while (parentSpan.firstChild) {
+                parentOfParent.insertBefore(parentSpan.firstChild, parentSpan);
+            }
+            parentSpan.remove();
+        }
+
         const parent = input.parentElement;
         const newLabel = document.createElement('label');
         newLabel.setAttribute('for', input.id);
-        input.className += ' custom-control-input';
 
         parent.removeAttribute('for');
-
-        if (parent.classList.contains('custom-control') && parent.classList.contains('custom-checkbox')) {
+        if (parent.classList.contains('form-check')) {
             return;
         }
+
+        input.className += ' form-check-input editor-check-input';
         if (parent.tagName.toLowerCase() === 'label') {
-            parent.className = 'custom-control custom-checkbox';
-            newLabel.className = 'custom-control-label checkbox-plain';
+            parent.className = 'form-check editor-check';
+            newLabel.className = 'form-check-label';
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'span') {
-            parent.className = 'custom-control custom-checkbox d-inline-flex';
-            newLabel.className = 'custom-control-label checkbox-heading';
+            parent.className = 'form-check editor-check d-inline-flex';
+            newLabel.className = 'form-check-label';
 
             parent.childNodes.forEach(child => {
                 if (child.nodeType === Node.TEXT_NODE && child.textContent.trim() !== '') {
@@ -51,8 +61,8 @@ function changeCheckboxStyle() {
             });
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'b') {
-            parent.className = 'custom-control custom-checkbox user-add';
-            newLabel.className = 'custom-control-label checkbox-plain';
+            parent.className = 'form-check editor-check user-add';
+            newLabel.className = 'form-check-label';
 
             parent.insertBefore(newLabel, input.nextSibling);
 
@@ -67,6 +77,19 @@ function changeCheckboxStyle() {
         }
     });
 }
+function changeButtonGroupStyle() {
+    const buttonGroups = document.querySelectorAll('span.btn-group');
+    buttonGroups.forEach(buttonGroup => {
+        if (buttonGroup.style.display === 'inline-block') {
+            buttonGroup.removeAttribute('style');
+        }
+    });
+}
+
+function changeStyle() {
+    changeCheckboxStyle();
+    changeButtonGroupStyle();
+}
 
 function navigateToConfig() {
     const selectElement = document.getElementById('configSelect');
@@ -77,8 +100,6 @@ function navigateToConfig() {
         window.location.href = '/';
     }
 }
-
-
 
 async function getConfigAndSchema() {
     var res = {};
@@ -105,7 +126,6 @@ async function getConfigAndSchema() {
 
 async function saveConfig() {
     clearFlashMessage();
-    // Validate the editor's current value against the schema
     const errors = editor.validate();
 
     if (errors.length) {
@@ -199,13 +219,13 @@ async function initialize_editor() {
     editor = new JSONEditor(document.querySelector('#editor-container'), jsonEditorConfig);
     editor.on('change', function () {
         if (editor_is_ready) {
-            // setTimeout(() => changeCheckboxStyle(), 0);
+            setTimeout(() => changeStyle(), 0);
             document.querySelector('#json-preview').textContent = JSON.stringify(editor.getValue(), null, 2);
         }
     });
     editor.on('ready', function () {
         editor_is_ready = true;
-        // setTimeout(() => changeCheckboxStyle(), 0);
+        setTimeout(() => changeStyle(), 0);
         statusBarElement.style.display = 'none';
     });
 }

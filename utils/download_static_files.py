@@ -7,6 +7,7 @@ STATIC_FILE_DIRECTORY = "configwebui/static"
 VERSION = {
     "json-editor": "2.15.2",
     "bootstrap": "5.3.3",
+    "jquery": "3.7.1",
     "fontawesome": "5.15.4",
 }
 
@@ -25,6 +26,10 @@ def download_json_editor() -> None:
 
 
 def download_bootstrap() -> None:
+    save_file(
+        f'https://cdn.jsdelivr.net/npm/jquery@{VERSION["jquery"]}/dist/jquery.slim.min.js',
+        f"{STATIC_FILE_DIRECTORY}/js/jquery.slim.min.js",
+    )
     save_file(
         f'https://cdn.jsdelivr.net/npm/bootstrap@{VERSION["bootstrap"]}/dist/js/bootstrap.bundle.min.js',
         f"{STATIC_FILE_DIRECTORY}/js/bootstrap.bundle.min.js",
