@@ -36,7 +36,7 @@ python ./examples/demo.py
 If your browser does not pop up, visit the link that shows in your terminal.
 
 5. Edit and save any config
-6. See if your config has been saved to `./examples/config`.
+6. See if your config has been saved to `./examples/config`
 7. Click `Launch main program` (a submenu from `Save`) and checkout the terminal
 
 It should output some messages based on your config.
