@@ -203,10 +203,19 @@ config_editor.run(host="localhost", port=80)
 ```
 
 ## Acknowledgements
+I would like to express my gratitude to the following projects and individuals for different scenarios and reasons:
+
 - Front-end design:
   - JSON Editor: [JSON Schema Based Editor](https://github.com/json-editor/json-editor)
+    - with version: `v2.15.2`
   - CSS: [Bootstrap · The most popular HTML, CSS, and JS library in the world.](https://getbootstrap.com/)
+    - with version: `v5.3.3`
+  - JavaScript Library: [jQuery](https://jquery.com/)
+    - with version: `v3.7.1`
   - Icons: [Font Awesome](https://fontawesome.com/)
+    - with version: `v5.15.4`
 - Coding
-  - Testing: [Eric](https://github.com/EricWay1024)
+  - Testing: My friend [Eric](https://github.com/EricWay1024)
+    - for: providing valuable test feedback
   - Assistant: [ChatGPT](https://chatgpt.com/)
+    - for: making things easier
