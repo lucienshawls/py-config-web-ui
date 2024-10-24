@@ -6,7 +6,7 @@ This package provides tools for editing configuration files
 (like json or yaml) in a user-friendly web interface.
 """
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __author__ = "Lucien Shaw"
 __email__ = "myxlc55@outlook.com"
 __license__ = "MIT"

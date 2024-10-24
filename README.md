@@ -1,9 +1,9 @@
 # pyConfigWebUI
 
-![Build Status](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml/badge.svg)
-![License](https://img.shields.io/github/license/lucienshawls/py-config-web-ui)
-![Latest Release Tag](https://img.shields.io/github/v/release/lucienshawls/py-config-web-ui)
-![Latest PyPI Version](https://img.shields.io/pypi/v/configwebui-lucien.svg)
+[![Build Status](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml/badge.svg)](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml)
+[![License](https://img.shields.io/github/license/lucienshawls/py-config-web-ui)](LICENSE)
+[![Latest Release Tag](https://img.shields.io/github/v/release/lucienshawls/py-config-web-ui)](https://github.com/lucienshawls/py-config-web-ui/releases/latest)
+[![Latest PyPI Version](https://img.shields.io/pypi/v/configwebui-lucien.svg)](https://pypi.org/project/configwebui-lucien/)
 
 A simple web-based configuration editor for Python applications.
 
@@ -203,7 +203,19 @@ config_editor.run(host="localhost", port=80)
 ```
 
 ## Acknowledgements
+I would like to express my gratitude to the following projects and individuals for different scenarios and reasons:
+
 - Front-end design:
   - JSON Editor: [JSON Schema Based Editor](https://github.com/json-editor/json-editor)
+    - with version: `v2.15.2`
   - CSS: [Bootstrap · The most popular HTML, CSS, and JS library in the world.](https://getbootstrap.com/)
+    - with version: `v5.3.3`
+  - JavaScript Library: [jQuery](https://jquery.com/)
+    - with version: `v3.7.1`
   - Icons: [Font Awesome](https://fontawesome.com/)
+    - with version: `v5.15.4`
+- Coding
+  - Testing: My friend [Eric](https://github.com/EricWay1024)
+    - for: providing valuable test feedback
+  - Assistant: [ChatGPT](https://chatgpt.com/)
+    - for: making things easier

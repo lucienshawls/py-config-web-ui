@@ -4,11 +4,12 @@ import requests
 from urllib.parse import urljoin
 
 STATIC_FILE_DIRECTORY = "configwebui/static"
-
-# json-editor: v2.15.1
-# fontawesome: v5.6.1
-# bootstrap: v4.6.2
-# jquery: v3.5.1
+VERSION = {
+    "json-editor": "2.15.2",
+    "bootstrap": "5.3.3",
+    "jquery": "3.7.1",
+    "fontawesome": "5.15.4",
+}
 
 
 def save_file(url: str, path: str) -> None:
@@ -19,28 +20,30 @@ def save_file(url: str, path: str) -> None:
 
 def download_json_editor() -> None:
     save_file(
-        f"https://cdn.jsdelivr.net/npm/@json-editor/json-editor@v2.15.1/dist/jsoneditor.min.js",
+        f'https://cdn.jsdelivr.net/npm/@json-editor/json-editor@{VERSION["json-editor"]}/dist/jsoneditor.min.js',
         f"{STATIC_FILE_DIRECTORY}/js/jsoneditor.min.js",
     )
 
 
 def download_bootstrap() -> None:
     save_file(
-        f"https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js",
+        f'https://cdn.jsdelivr.net/npm/jquery@{VERSION["jquery"]}/dist/jquery.slim.min.js',
         f"{STATIC_FILE_DIRECTORY}/js/jquery.slim.min.js",
     )
     save_file(
-        f"https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js",
+        f'https://cdn.jsdelivr.net/npm/bootstrap@{VERSION["bootstrap"]}/dist/js/bootstrap.bundle.min.js',
         f"{STATIC_FILE_DIRECTORY}/js/bootstrap.bundle.min.js",
     )
     save_file(
-        f"https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css",
+        f'https://cdn.jsdelivr.net/npm/bootstrap@{VERSION["bootstrap"]}/dist/css/bootstrap.min.css',
         f"{STATIC_FILE_DIRECTORY}/css/bootstrap.min.css",
     )
 
 
 def download_fontawesome() -> None:
-    fontawesome_url = f"https://use.fontawesome.com/releases/v5.6.1/css/all.css"
+    fontawesome_url = (
+        f'https://use.fontawesome.com/releases/v{VERSION["fontawesome"]}/css/all.css'
+    )
     save_file(fontawesome_url, f"{STATIC_FILE_DIRECTORY}/css/fontawesome.all.css")
 
     with open(f"{STATIC_FILE_DIRECTORY}/css/fontawesome.all.css", "r") as f:
