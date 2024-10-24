@@ -83,6 +83,9 @@ function changeButtonGroupStyle() {
         if (buttonGroup.style.display === 'inline-block') {
             buttonGroup.removeAttribute('style');
         }
+        if (buttonGroup.querySelector('button.json-editor-btntype-delete') !== null) {
+            buttonGroup.classList.add('mb-1');
+        }
     });
 }
 
