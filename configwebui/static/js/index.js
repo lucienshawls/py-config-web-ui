@@ -185,7 +185,7 @@ async function initialize_editor() {
     const jsonEditorConfig = {
         form_name_root: configRoot,
         iconlib: 'fontawesome5',
-        theme: 'bootstrap4',
+        theme: 'bootstrap5',
         show_opt_in: true,
         disable_edit_json: true,
         disable_properties: true,
@@ -199,13 +199,13 @@ async function initialize_editor() {
     editor = new JSONEditor(document.querySelector('#editor-container'), jsonEditorConfig);
     editor.on('change', function () {
         if (editor_is_ready) {
-            setTimeout(() => changeCheckboxStyle(), 0);
+            // setTimeout(() => changeCheckboxStyle(), 0);
             document.querySelector('#json-preview').textContent = JSON.stringify(editor.getValue(), null, 2);
         }
     });
     editor.on('ready', function () {
         editor_is_ready = true;
-        setTimeout(() => changeCheckboxStyle(), 0);
+        // setTimeout(() => changeCheckboxStyle(), 0);
         statusBarElement.style.display = 'none';
     });
 }
