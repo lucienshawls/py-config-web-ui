@@ -1,9 +1,9 @@
 # pyConfigWebUI
 
-![Build Status](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml/badge.svg)
-![License](https://img.shields.io/github/license/lucienshawls/py-config-web-ui)
-![Latest Release Tag](https://img.shields.io/github/v/release/lucienshawls/py-config-web-ui)
-![Latest PyPI Version](https://img.shields.io/pypi/v/configwebui-lucien.svg)
+[![Build Status](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml/badge.svg)](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml)
+[![License](https://img.shields.io/github/license/lucienshawls/py-config-web-ui)](LICENSE)
+[![Latest Release Tag](https://img.shields.io/github/v/release/lucienshawls/py-config-web-ui)](https://github.com/lucienshawls/py-config-web-ui/releases/latest)
+[![Latest PyPI Version](https://img.shields.io/pypi/v/configwebui-lucien.svg)](https://pypi.org/project/configwebui-lucien/)
 
 A simple web-based configuration editor for Python applications.
 
