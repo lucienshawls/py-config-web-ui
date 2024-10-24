@@ -22,7 +22,6 @@ function clearFlashMessage() {
 }
 
 function changeCheckboxStyle() {
-    console.log('Changing checkbox style');
     const container = document.querySelector('#editor-container');
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
 
