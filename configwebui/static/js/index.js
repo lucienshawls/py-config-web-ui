@@ -1,5 +1,5 @@
 var editor;
-var myschema;
+var editor_is_ready = false;
 const pathName = window.location.pathname;
 const configRoot = pathName.split('/').pop();
 const statusBarElement = document.querySelector('#status-bar');
@@ -11,7 +11,7 @@ function flashMessage(message, category) {
     flashMessageElement.insertAdjacentHTML('beforeend', messageHTML);
     window.scroll({
         top: 0,
-        behavior: 'smooth' // 平滑滚动
+        behavior: 'smooth'
     });
     return messageHTML;
 }
@@ -21,37 +21,38 @@ function clearFlashMessage() {
     flashMessageElement.innerHTML = '';
 }
 
-function changeCheckboxStyleBootstrap4() {
-    const container = document.querySelector("#editor-container");
+function changeCheckboxStyle() {
+    const container = document.querySelector('#editor-container');
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
 
     checkboxes.forEach(input => {
         const parent = input.parentElement;
-        const newLabel = document.createElement("label");
-        newLabel.setAttribute("for", input.id);
-        input.className += " custom-control-input";
+        const newLabel = document.createElement('label');
+        newLabel.setAttribute('for', input.id);
+        input.className += ' custom-control-input';
+
+        parent.removeAttribute('for');
 
         if (parent.classList.contains('custom-control') && parent.classList.contains('custom-checkbox')) {
             return;
         }
         if (parent.tagName.toLowerCase() === 'label') {
-            parent.removeAttribute('for');
-            parent.className = "custom-control custom-checkbox";
-            newLabel.className = "custom-control-label checkbox-plain";
+            parent.className = 'custom-control custom-checkbox';
+            newLabel.className = 'custom-control-label checkbox-plain';
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'span') {
-            parent.className = "custom-control custom-checkbox d-inline-flex";
-            newLabel.className = "custom-control-label checkbox-heading";
+            parent.className = 'custom-control custom-checkbox d-inline-flex';
+            newLabel.className = 'custom-control-label checkbox-heading';
 
             parent.childNodes.forEach(child => {
-                if (child.nodeType === Node.TEXT_NODE && child.textContent.trim() !== "") {
+                if (child.nodeType === Node.TEXT_NODE && child.textContent.trim() !== '') {
                     newLabel.appendChild(child);
                 }
             });
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'b') {
-            parent.className = "custom-control custom-checkbox user-add";
-            newLabel.className = "custom-control-label checkbox-plain";
+            parent.className = 'custom-control custom-checkbox user-add';
+            newLabel.className = 'custom-control-label checkbox-plain';
 
             parent.insertBefore(newLabel, input.nextSibling);
 
@@ -67,26 +68,13 @@ function changeCheckboxStyleBootstrap4() {
     });
 }
 
-function changeCheckboxStyle() {
-    changeCheckboxStyleBootstrap4();
-    const container = document.querySelector("#editor-container");
-    const saveButtons = container.querySelectorAll('.json-editor-btntype-save');
-    saveButtons.forEach(button => {
-        button.addEventListener('click', changeCheckboxStyleBootstrap4);
-    });
-    const addButtons = container.querySelectorAll('.json-editor-btntype-add');
-    addButtons.forEach(button => {
-        button.addEventListener('click', changeCheckboxStyleBootstrap4);
-    });
-}
-
 function navigateToConfig() {
-    const selectElement = document.getElementById("configSelect");
+    const selectElement = document.getElementById('configSelect');
     const selectedValue = selectElement.value;
     if (selectedValue) {
         window.location.href = selectedValue;
     } else {
-        window.location.href = "/";
+        window.location.href = '/';
     }
 }
 
@@ -167,7 +155,7 @@ async function reload() {
 async function launch() {
     clearFlashMessage();
     try {
-        flashMessage("Trying to launch the main program. Go back and check out your terminal.", "info");
+        flashMessage('Trying to launch the main program. Go back and check out your terminal.', 'info');
         await fetch(`/api/launch`, {
             method: 'GET',
         });
@@ -179,7 +167,7 @@ async function launch() {
 async function terminate() {
     clearFlashMessage();
     try {
-        flashMessage("Trying to terminate the editor backend. Subsequent changes will not be saved.", "warning");
+        flashMessage('Trying to terminate the editor backend. Subsequent changes will not be saved.', 'warning');
         await fetch(`/api/shutdown`, {
             method: 'GET',
         });
@@ -208,13 +196,16 @@ async function initialize_editor() {
         startval: myconfig,
         schema: myschema
     };
-
     editor = new JSONEditor(document.querySelector('#editor-container'), jsonEditorConfig);
     editor.on('change', function () {
-        document.querySelector('#json-preview').textContent = JSON.stringify(editor.getValue(), null, 2);
+        if (editor_is_ready) {
+            setTimeout(() => changeCheckboxStyle(), 0);
+            document.querySelector('#json-preview').textContent = JSON.stringify(editor.getValue(), null, 2);
+        }
     });
     editor.on('ready', function () {
-        changeCheckboxStyle();
+        editor_is_ready = true;
+        setTimeout(() => changeCheckboxStyle(), 0);
         statusBarElement.style.display = 'none';
     });
 }

@@ -1,9 +1,16 @@
 # pyConfigWebUI
 
+![Build Status](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml/badge.svg)
+![License](https://img.shields.io/github/license/lucienshawls/py-config-web-ui)
+![Latest Release Tag](https://img.shields.io/github/v/release/lucienshawls/py-config-web-ui)
+![Latest PyPI Version](https://img.shields.io/pypi/v/configwebui-lucien.svg)
+
 A simple web-based configuration editor for Python applications.
 
 This package provides tools for editing configuration files
 in a user-friendly web interface.
+
+Package on PyPI: [configwebui-lucien · PyPI](https://pypi.org/project/configwebui-lucien/)
 
 ## Try it out
 To get an intuitive understanding of how to use this tool, you can do the following:
@@ -29,7 +36,7 @@ python ./examples/demo.py
 If your browser does not pop up, visit the link that shows in your terminal.
 
 5. Edit and save any config
-6. See if your config has been saved to `./examples/config`.
+6. See if your config has been saved to `./examples/config`
 7. Click `Launch main program` (a submenu from `Save`) and checkout the terminal
 
 It should output some messages based on your config.

@@ -1,4 +1,4 @@
-name: Release and Publish
+name: Build and Publish
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  release_and_publish:
-    name: Release and Publish
+  build_and_publish:
+    name: Build and Publish
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -30,41 +30,20 @@ jobs:
           python setup.py sdist bdist_wheel
 
       - name: Get the package version
+        id: get_version
         run: |
-          echo VERSION="$(python -c 'from configwebui import __version__; print(__version__)')" >> $GITHUB_ENV
+          echo version="$(python -c 'from configwebui import __version__; print(__version__)')" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:    
+          VERSION: ${{ steps.get_version.outputs.version }}
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref_name }}
-          body: Release ${{ github.ref_name }}
-          # body_path: CHANGELOG.md
-          draft: false
-          prerelease: false
-
-      - name: Upload distribution files to GitHub Release (whl)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/configwebui_lucien-${{ env.VERSION }}-py3-none-any.whl
-          asset_name: configwebui_lucien-${{ env.VERSION }}-py3-none-any.whl
-          asset_content_type: application/octet-stream
-
-      - name: Upload source tarball to GitHub Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/configwebui_lucien-${{ env.VERSION }}.tar.gz
-          asset_name: configwebui_lucien-${{ env.VERSION }}.tar.gz
-          asset_content_type: application/octet-stream
+          name: Release ${{ github.ref_name }}
+          files: |
+            ./dist/configwebui_lucien-${{ env.VERSION }}-py3-none-any.whl
+            ./dist/configwebui_lucien-${{ env.VERSION }}.tar.gz
+          generate_release_notes: true
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
