@@ -12,18 +12,29 @@ html {
     scroll-margin-top: 10rem;
 }
 
-.editor-check-input {
-    position: relative;
-    top: .3rem;
-}
-
 .editor-check {
     padding-left: 0;
+}
+
+.editor-check-input {
+    position: relative;
+}
+
+.check-input-plain {
+    top: .35rem;
+}
+
+.check-input-heading {
+    top: .4rem;
 }
 
 .je-switcher {
     padding: .25rem 2.25rem .25rem .75rem !important;
     margin-bottom: .25rem !important;
+}
+
+.je-object__controls {
+    top: -.15rem;
 }
 
 .card-title {
@@ -33,6 +44,7 @@ html {
 .user-add {
     display: inline-block;
     font-weight: bolder;
+    margin-right: .75rem;
 }
 
 /* small */
@@ -83,4 +95,14 @@ html {
 #json-preview {
     font-family: monospace;
     height: 25rem;
+}
+
+#main-output {
+    font-family: monospace;
+    height: 30rem;
+}
+
+#save-output {
+    font-family: monospace;
+    height: 20rem;
 }

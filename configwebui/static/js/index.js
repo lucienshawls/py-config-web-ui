@@ -1,9 +1,12 @@
-var editor;
-var editor_is_ready = false;
+'use strict';
+let editor;
+let editor_is_ready = false;
 const pathName = window.location.pathname;
 const configRoot = pathName.split('/').pop();
 const statusBarElement = document.querySelector('#status-bar');
 const statusIconElement = document.querySelector('#status-icon');
+const mainOutputElement = document.querySelector('#main-output');
+const saveOutputElement = document.querySelector('#save-output');
 
 function flashMessage(message, category) {
     const flashMessageElement = document.querySelector('#flash-messages');
@@ -47,12 +50,14 @@ function changeCheckboxStyle() {
 
         input.className += ' form-check-input editor-check-input';
         if (parent.tagName.toLowerCase() === 'label') {
+            input.className += ' check-input-plain';
             parent.className = 'form-check editor-check';
-            newLabel.className = 'form-check-label';
+            newLabel.className = 'form-check-label check-label-plain';
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'span') {
+            input.className += ' check-input-heading';
             parent.className = 'form-check editor-check d-inline-flex';
-            newLabel.className = 'form-check-label';
+            newLabel.className = 'form-check-label check-label-heading';
 
             parent.childNodes.forEach(child => {
                 if (child.nodeType === Node.TEXT_NODE && child.textContent.trim() !== '') {
@@ -61,8 +66,9 @@ function changeCheckboxStyle() {
             });
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'b') {
+            input.className += ' check-input-plain';
             parent.className = 'form-check editor-check user-add';
-            newLabel.className = 'form-check-label';
+            newLabel.className = 'form-check-label check-label-plain';
 
             parent.insertBefore(newLabel, input.nextSibling);
 
@@ -105,7 +111,7 @@ function navigateToConfig() {
 }
 
 async function getConfigAndSchema() {
-    var res = {};
+    let res = {};
     const pathName = window.location.pathname;
     try {
         const response = await fetch('/api' + pathName, { method: 'GET' });
@@ -146,14 +152,14 @@ async function saveConfig() {
     const configValue = JSON.stringify(editor.getValue());
     try {
         const response = await fetch(`/api${pathName}`, {
-            method: 'POST',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: configValue
         });
         const data = await response.json();
-        var messageCategory;
+        let messageCategory;
         if (data.success) {
             messageCategory = 'success';
         } else {
@@ -162,9 +168,10 @@ async function saveConfig() {
         for (const message of data.messages) {
             flashMessage(message, messageCategory);
         }
-
+        return data.success;
     } catch (error) {
         flashMessage('Failed to save config. Checkout your python backend.', 'danger');
+        return false;
     }
 }
 
@@ -173,17 +180,29 @@ async function reload() {
     clearFlashMessage();
     const configAndSchema = await getConfigAndSchema();
     editor.setValue(configAndSchema.config);
+    setTimeout(() => changeStyle(), 0);
 }
 
 async function launch() {
     clearFlashMessage();
     try {
-        flashMessage('Trying to launch the main program. Go back and check out your terminal.', 'info');
-        await fetch(`/api/launch`, {
+        const response = await fetch(`/api/launch`, {
             method: 'GET',
         });
+        const data = await response.json();
+        let messageCategory;
+        if (data.success) {
+            messageCategory = 'success';
+        } else {
+            messageCategory = 'danger';
+        }
+        for (const message of data.messages) {
+            flashMessage(message, messageCategory);
+        }
+        return data.success;
     } catch (error) {
-        flashMessage('Failed to launch the main program. Check your python backend.', 'danger');
+        flashMessage('Failed to launch main program. Check your python backend.', 'danger');
+        return false;
     }
 }
 
@@ -235,22 +254,114 @@ async function initialize_editor() {
 
 initialize_editor();
 
+function get_output(func_type) {
+    let complete = true;
+    const intervalId = setInterval(async () => {
+        if (!complete) {
+            return;
+        }
+        let outputElement;
+        let url;
+        let err_message;
+        if (func_type === 'main') {
+            outputElement = mainOutputElement;
+            url = `/api/get_main_output`;
+            err_message = 'Failed to get output from the main program.';
+        } else if (func_type === 'save') {
+            outputElement = saveOutputElement;
+            url = `/api${pathName}/get_save_output`;
+            err_message = 'Failed to get output from the data-saving script.';
+        } else {
+            clearInterval(intervalId);
+            return;
+        }
+        try {
+            complete = false;
+            const response = await fetch(url, {
+                method: 'GET',
+            });
+            const data = await response.json();
+
+            let scroll = false;
+            if (outputElement.scrollTop + outputElement.clientHeight >= outputElement.scrollHeight) {
+                scroll = true;
+            }
+
+            outputElement.value = data.output + data.error;
+            if (scroll) {
+                outputElement.scrollTop = outputElement.scrollHeight;
+            }
+            if (!data.running) {
+                clearInterval(intervalId);
+            }
+        } catch (error) {
+            flashMessage(err_message, 'danger');
+            clearInterval(intervalId);
+        }
+        complete = true;
+    }, 200);
+}
+
+// function get_save_output() {
+//     let complete = true;
+//     const intervalId = setInterval(async () => {
+//         if (!complete) {
+//             return;
+//         }
+//         try {
+//             complete = false;
+//             const response = await fetch(`/api${pathName}/get_save_output`, {
+//                 method: 'GET',
+//             });
+//             const data = await response.json();
+//             let scroll = false;
+//             if (saveOutputElement.scrollTop + saveOutputElement.clientHeight >= saveOutputElement.scrollHeight) {
+//                 scroll = true;
+//             }
+
+//             saveOutputElement.value = data.output;
+//             if (scroll) {
+//                 saveOutputElement.scrollTop = saveOutputElement.scrollHeight;
+//             }
+//             if (!data.running) {
+//                 clearInterval(intervalId);
+//             }
+//         } catch (error) {
+//             flashMessage('Failed to get output from the data-saving script.', 'danger');
+//             clearInterval(intervalId);
+//         }
+//         complete = true;
+//     }, 200);
+// }
+
 const saveActionButtons = document.querySelectorAll('.save-action');
 saveActionButtons.forEach(button => {
-    button.addEventListener('click', saveConfig);
+    button.addEventListener('click', async () => {
+        if (await saveConfig()) {
+            get_output('save');
+        }
+    });
 });
 
 const resetActionButtons = document.querySelectorAll('.reset-action');
 resetActionButtons.forEach(button => {
-    button.addEventListener('click', reload);
+    button.addEventListener('click', async () => {
+        await reload();
+    });
 });
 
 const launchActionButtons = document.querySelectorAll('.launch-action');
 launchActionButtons.forEach(button => {
-    button.addEventListener('click', launch);
+    button.addEventListener('click', async () => {
+        if (await launch()) {
+            get_output('main');
+        }
+    });
 });
 
 const terminateActionButtons = document.querySelectorAll('.terminate-action');
 terminateActionButtons.forEach(button => {
-    button.addEventListener('click', terminate);
+    button.addEventListener('click', async () => {
+        await terminate();
+    });
 });
