@@ -64,7 +64,7 @@
         <div class="container col-md-8" id="flash-messages">
             {% for category, message in get_flashed_messages(with_categories=true) %}
             <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                <div>{{ message }}</div>
+                <div>{{ message | safe }}</div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             {% endfor %}
@@ -78,8 +78,23 @@
             <div class="mx-1"></div>
             <button class="btn btn-danger col-5 col-lg-2 reset-action" type="button">Reset</button>
         </div>
-        <h2>Preview json</h2>
-        <textarea id="json-preview" class="form-control" disabled></textarea>
+        <div class="my-1">
+            <h2>Preview json</h2>
+            <textarea id="json-preview" class="form-control" title="Preview json" placeholder="" disabled></textarea>
+        </div>
+        <div class="my-1">
+            <h2>Output of main program</h2>
+            <textarea id="main-output" class="form-control" title="Output of main program"
+                placeholder="After you launch the main program, the output will show here. Resets when refreshing the page."
+                disabled></textarea>
+        </div>
+        <div class="my-1">
+            <h2>Output of data-saving script</h2>
+            <textarea id="save-output" class="form-control" title="Output of data-saving script"
+                placeholder="After you save the current config, the output will show here. Resets when refreshing the page."
+                disabled></textarea>
+        </div>
+        <div class="mb-5"></div>
     </div>
     <script src="/static/js/jquery.slim.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>

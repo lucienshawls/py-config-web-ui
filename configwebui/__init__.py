@@ -6,7 +6,7 @@ This package provides tools for editing configuration files
 (like json or yaml) in a user-friendly web interface.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __author__ = "Lucien Shaw"
 __email__ = "myxlc55@outlook.com"
 __license__ = "MIT"
@@ -18,11 +18,13 @@ __all__ = ["ConfigEditor", "UserConfig", "ResultStatus"]
 
 
 import os
+import sys
 import time
 import logging
 import threading
 import webbrowser
 from flask import Flask
+from io import StringIO
 from copy import deepcopy
 from collections.abc import Callable
 from socket import setdefaulttimeout
@@ -31,7 +33,146 @@ from jsonschema import validate, ValidationError
 
 SERVER_TIMEOUT = 3
 DAEMON_CHECK_INTERVAL = 1
+READ_STREAM_INTERVAL = 0.01
+BASE_OUTPUT_STREAM = sys.stdout
+BASE_ERROR_STREAM = sys.stderr
 logging.getLogger("werkzeug").disabled = True
+
+
+class ThreadOutputStream:
+    def __init__(self, base_stream: StringIO) -> None:
+        self.base_stream = base_stream
+        self.streams: dict[str, StringIO] = {}
+
+    def add_stream(self, thread_id: int, stream: StringIO) -> None:
+        self.streams[thread_id] = stream
+
+    def write(self, message: str) -> None:
+        key = threading.current_thread().name
+        stream = self.streams.get(key, self.base_stream)
+        stream.write(message)
+
+    def flush(self) -> None:
+        key = threading.current_thread().name
+        stream = self.streams.get(key, self.base_stream)
+        stream.flush()
+
+
+class ProgramRunner:
+    def __init__(
+        self,
+        function: Callable,
+        hide_terminal_output: bool = False,
+        hide_terminal_error: bool = False,
+    ) -> None:
+        if not callable(function):
+            raise TypeError(
+                f"function must be a callable function, not {type(function)}"
+            )
+        self.function = function
+
+        self.running = False
+        self.hide_terminal_output = hide_terminal_output
+        self.hide_terminal_error = hide_terminal_error
+
+        self.lock = threading.Lock()
+
+        self.output = ""
+        self.recently_added_output = ""
+
+        self.error = ""
+        self.recently_added_error = ""
+
+    def capture_output(self) -> None:
+        pointer_out = 0
+        pointer_err = 0
+        capture_complete = False
+        while True:
+            if not self.program_thread.is_alive():
+                capture_complete = True
+
+            self.io_out.seek(pointer_out)
+            new_out = self.io_out.read()
+            pointer_out += len(new_out)
+            self.io_out.seek(pointer_out)
+            if not self.hide_terminal_output:
+                print(new_out, end="", file=BASE_OUTPUT_STREAM)
+
+            self.io_err.seek(pointer_err)
+            new_err = self.io_err.read()
+            pointer_err += len(new_err)
+            self.io_err.seek(pointer_err)
+
+            if not self.hide_terminal_error:
+                print(new_err, end="", file=BASE_ERROR_STREAM)
+
+            with self.lock:
+                self.output += new_out
+                self.recently_added_output += new_out
+
+                self.error += new_err
+                self.recently_added_error += new_err
+
+                if capture_complete:
+                    self.running = False
+                    break
+            time.sleep(READ_STREAM_INTERVAL)
+
+    def run_in_separate_context(self, *args, **kwargs) -> None:
+        if isinstance(sys.stdout, ThreadOutputStream):
+            sys.stdout.add_stream(threading.current_thread().name, self.io_out)
+        if isinstance(sys.stderr, ThreadOutputStream):
+            sys.stderr.add_stream(threading.current_thread().name, self.io_err)
+        self.function(*args, **kwargs)
+
+    def run(self, *args, **kwargs) -> None:
+        if self.running:
+            return ResultStatus(False, "Program is already running")
+        self.output = ""
+        self.recently_added_output = ""
+
+        self.error = ""
+        self.recently_added_error = ""
+
+        self.io_out = StringIO()
+        self.io_err = StringIO()
+
+        self.running = True
+        self.program_thread = threading.Thread(
+            target=self.run_in_separate_context, args=args, kwargs=kwargs
+        )
+        self.capture_thread = threading.Thread(target=self.capture_output)
+        self.program_thread.start()
+        self.capture_thread.start()
+        return ResultStatus(True)
+
+    def get_output(self, recent_only: bool = False) -> str:
+        with self.lock:
+            if bool(recent_only):
+                output = self.recently_added_output
+            else:
+                output = self.output
+            self.recently_added_output = ""
+        return output
+
+    def get_error(self, recent_only: bool = False) -> str:
+        with self.lock:
+            if bool(recent_only):
+                error = self.recently_added_error
+            else:
+                error = self.error
+            self.recently_added_error = ""
+        return error
+
+    def wait_for_join(self) -> None:
+        if hasattr(self, "program_thread"):
+            self.program_thread.join()
+        if hasattr(self, "capture_thread"):
+            self.capture_thread.join()
+
+    def is_running(self) -> bool:
+        with self.lock:
+            return self.running
 
 
 class ResultStatus:
@@ -198,8 +339,8 @@ class UserConfig:
         else:
             return result
 
-    def save(self) -> None:
-        threading.Thread(target=self.save_func, args=(self.config,)).start()
+    def save(self) -> ResultStatus:
+        return self.save_func_runner.run(self.config)
 
     def get_name(self) -> str:
         return self.name
@@ -240,7 +381,11 @@ class UserConfig:
             raise TypeError(
                 f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
             )
-        self.save_func = save_func
+        self.save_func_runner = ProgramRunner(
+            function=save_func,
+            hide_terminal_output=True,
+            hide_terminal_error=False,
+        )
         if schema is None:
             schema = {}
         if not isinstance(schema, dict):
@@ -267,7 +412,11 @@ class ConfigEditor:
                 f"main_entry must be a callable function, not {type(main_entry)}"
             )
         self.running = False
-        self.main_entry = main_entry
+        self.main_entry_runner = ProgramRunner(
+            function=main_entry,
+            hide_terminal_output=False,
+            hide_terminal_error=False,
+        )
         self.config_store: dict[str, UserConfig] = {}
 
         flask_app = Flask(
@@ -312,14 +461,29 @@ class ConfigEditor:
         else:
             raise KeyError(f"Config {user_config_name} not found")
 
-    def launch_main_entry(self) -> None:
-        threading.Thread(target=self.main_entry).start()
+    def launch_main_entry(self) -> ResultStatus:
+        return self.main_entry_runner.run()
 
     def stop_server(self) -> None:
         self.running = False
 
     def start_server(self) -> None:
         self.server.serve_forever()
+
+    def clean_up(self) -> None:
+        print("Please wait for the server to stop... ", end="", file=BASE_OUTPUT_STREAM)
+        self.server.shutdown()
+        self.server_thread.join()
+        print("Server stopped.", file=BASE_OUTPUT_STREAM)
+
+        sys.stdout = BASE_OUTPUT_STREAM
+        sys.stderr = BASE_ERROR_STREAM
+        print("STDOUT and STDERR has been restored.")
+        print("Please wait for the remaining threads to stop...")
+        for user_config_name in self.get_user_config_names():
+            self.get_user_config(user_config_name).save_func_runner.wait_for_join()
+        self.main_entry_runner.wait_for_join()
+        print("All remaining threads stopped.")
 
     def run(self, host="localhost", port=80) -> None:
         url = (
@@ -335,8 +499,11 @@ class ConfigEditor:
         setdefaulttimeout(SERVER_TIMEOUT)
         self.server = make_server(host, port, self.app)
 
-        server_thread = threading.Thread(target=self.start_server)
-        server_thread.start()
+        sys.stdout = ThreadOutputStream(base_stream=BASE_OUTPUT_STREAM)
+        sys.stderr = ThreadOutputStream(base_stream=BASE_ERROR_STREAM)
+
+        self.server_thread = threading.Thread(target=self.start_server)
+        self.server_thread.start()
         self.running = True
         while self.running:
             try:
@@ -344,7 +511,4 @@ class ConfigEditor:
             except KeyboardInterrupt:
                 if self.running:
                     self.stop_server()
-        print("Please wait for the server to stop...")
-        self.server.shutdown()
-        server_thread.join()
-        print("Server stopped.")
+        self.clean_up()
