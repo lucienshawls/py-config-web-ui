@@ -1,4 +1,4 @@
-"""
+"""\
 configwebui - A simple web-based configuration editor
 for Python applications.
 
@@ -6,16 +6,7 @@ This package provides tools for editing configuration files
 (like json or yaml) in a user-friendly web interface.
 """
 
-__version__ = "0.2.1"
-__author__ = "Lucien Shaw"
-__email__ = "myxlc55@outlook.com"
-__license__ = "MIT"
-__url__ = "https://github.com/lucienshawls/py-config-web-ui"
-__description__ = "A simple web-based configuration editor for Python applications."
-__dependencies__ = ["Flask", "jsonschema"]
-__keywords__ = ["configuration", "editor", "web", "tool", "json", "yaml", "ui", "flask"]
 __all__ = ["ConfigEditor", "UserConfig", "ResultStatus"]
-
 
 import os
 import sys
@@ -30,6 +21,7 @@ from collections.abc import Callable
 from socket import setdefaulttimeout
 from werkzeug.serving import make_server
 from jsonschema import validate, ValidationError
+from .__metadata__ import *
 
 SERVER_TIMEOUT = 3
 DAEMON_CHECK_INTERVAL = 1

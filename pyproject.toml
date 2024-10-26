@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "configwebui-lucien"
+requires-python = ">=3.8, <4"
+authors = [{ name = "Lucien Shaw", email = "myxlc55@outlook.com" }]
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Natural Language :: Chinese (Simplified)",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: JavaScript",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+]
+dynamic = ["version", "dependencies", "description", "keywords"]
+
+[project.urls]
+"Homepage" = "https://github.com/lucienshawls/py-config-web-ui"
+"Documentation" = "https://github.com/lucienshawls/py-config-web-ui/blob/master/README.md"
+"Release notes" = "https://github.com/lucienshawls/py-config-web-ui/releases"
+"Source" = "https://github.com/lucienshawls/py-config-web-ui.git"
+"Tracker" = "https://github.com/lucienshawls/py-config-web-ui/issues"

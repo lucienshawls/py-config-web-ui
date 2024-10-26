@@ -1,4 +1,2 @@
 Flask
-requests
 jsonschema
-setuptools
