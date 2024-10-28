@@ -76,7 +76,7 @@ function changeCheckboxStyle() {
             while (parent.firstChild) {
                 newParent.appendChild(parent.firstChild);
             }
-            Array.from(parent.attributes).forEach(attr => {
+            parent.attributes.forEach(attr => {
                 newParent.setAttribute(attr.name, attr.value);
             });
             parent.replaceWith(newParent);
@@ -95,9 +95,25 @@ function changeButtonGroupStyle() {
     });
 }
 
+function setAnchor() {
+    document.querySelectorAll('[data-schemapath]').forEach(element => {
+        if (!element.id) {
+            const dataSchemaPath = element.getAttribute('data-schemapath')
+            // root.a.b.c => root[a][b][c]
+            const parts = dataSchemaPath.split('.');
+            const anchor = parts.map((part, index) => {
+                return index >= 1 ? `[${part}]` : part;
+            }).join('');
+
+            element.id = anchor;
+        }
+    });
+}
+
 function changeStyle() {
     changeCheckboxStyle();
     changeButtonGroupStyle();
+    setAnchor();
 }
 
 function navigateToConfig() {
@@ -139,12 +155,12 @@ async function saveConfig() {
 
     if (errors.length) {
         errors.forEach(error => {
+            // root.a.b.c => root[a][b][c]
             const parts = error.path.split('.');
-            const result = parts.map((part, index) => {
+            const href = parts.map((part, index) => {
                 return index >= 1 ? `[${part}]` : part;
-            });
+            }).join('');
 
-            const href = result.join('');
             flashMessage(`Property "<b>${error.property}</b>" unsatisfied at {<a href="#${href}" class="alert-link">${error.path}</a>}: ${error.message}`, 'danger');
         });
         return;
@@ -301,38 +317,6 @@ function get_output(func_type) {
         complete = true;
     }, 200);
 }
-
-// function get_save_output() {
-//     let complete = true;
-//     const intervalId = setInterval(async () => {
-//         if (!complete) {
-//             return;
-//         }
-//         try {
-//             complete = false;
-//             const response = await fetch(`/api${pathName}/get_save_output`, {
-//                 method: 'GET',
-//             });
-//             const data = await response.json();
-//             let scroll = false;
-//             if (saveOutputElement.scrollTop + saveOutputElement.clientHeight >= saveOutputElement.scrollHeight) {
-//                 scroll = true;
-//             }
-
-//             saveOutputElement.value = data.output;
-//             if (scroll) {
-//                 saveOutputElement.scrollTop = saveOutputElement.scrollHeight;
-//             }
-//             if (!data.running) {
-//                 clearInterval(intervalId);
-//             }
-//         } catch (error) {
-//             flashMessage('Failed to get output from the data-saving script.', 'danger');
-//             clearInterval(intervalId);
-//         }
-//         complete = true;
-//     }, 200);
-// }
 
 const saveActionButtons = document.querySelectorAll('.save-action');
 saveActionButtons.forEach(button => {
