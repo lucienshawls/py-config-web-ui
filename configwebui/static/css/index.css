@@ -8,40 +8,44 @@ html {
     scroll-behavior: smooth;
 }
 
-.form-control {
-    scroll-margin-top: 10rem;
+html * {
+    scroll-margin-top: 5rem;
 }
 
-.editor-check {
+#editor-container .editor-check {
     padding-left: 0;
 }
 
-.editor-check-input {
+#editor-container .editor-check-input {
     position: relative;
 }
 
-.check-input-plain {
+#editor-container .check-input-plain {
     top: .3rem;
 }
 
-.check-input-heading {
+#editor-container .check-input-heading {
     top: .4rem;
 }
 
-.je-switcher {
+#editor-container .je-switcher {
     padding: .25rem 2.25rem .25rem .75rem !important;
     margin-bottom: .25rem !important;
 }
 
-.je-object__controls {
+#editor-container .je-object__controls {
     top: -.15rem;
 }
 
-.card-title {
-    margin-bottom: 0;
+#editor-container .card-title {
+    margin-bottom: 0rem;
 }
 
-.user-add {
+#editor-container .level-1 {
+    margin-bottom: 0.2rem;
+}
+
+#editor-container .user-add-item {
     display: inline-block;
     font-weight: bolder;
     margin-right: .75rem;
@@ -53,8 +57,12 @@ html {
         width: 100%;
     }
 
-    #action-container-group>button {
-        width: 40%;
+    #action-dropdown-group .dropdown-menu {
+        position: absolute;
+        left: 0;
+        top: 100%;
+        width: 100%;
+        transform: translateY(0);
     }
 }
 
@@ -64,8 +72,8 @@ html {
         width: auto;
     }
 
-    #action-container-group>button {
-        width: 12%;
+    #form-action-group>div {
+        padding-left: 0;
     }
 }
 
@@ -88,21 +96,18 @@ html {
     transform: scale(0.75);
 }
 
-#action-container-group {
-    padding: 0;
+.code-text {
+    font-family: monospace;
 }
 
-#json-preview {
-    font-family: monospace;
-    height: 25rem;
+#json-preview-text {
+    height: 40rem;
 }
 
-#main-output {
-    font-family: monospace;
-    height: 30rem;
-}
-
-#save-output {
-    font-family: monospace;
+#save-output-text {
     height: 20rem;
+}
+
+#main-output-text {
+    height: 30rem;
 }

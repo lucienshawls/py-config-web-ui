@@ -5,8 +5,9 @@ const pathName = window.location.pathname;
 const configRoot = pathName.split('/').pop();
 const statusBarElement = document.querySelector('#status-bar');
 const statusIconElement = document.querySelector('#status-icon');
-const mainOutputElement = document.querySelector('#main-output');
-const saveOutputElement = document.querySelector('#save-output');
+const jsonPreviewTextElement = document.querySelector('#json-preview-text');
+const mainOutputTextElement = document.querySelector('#main-output-text');
+const saveOutputTextElement = document.querySelector('#save-output-text');
 
 function flashMessage(message, category) {
     const flashMessageElement = document.querySelector('#flash-messages');
@@ -67,7 +68,7 @@ function changeCheckboxStyle() {
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'b') {
             input.className += ' check-input-plain';
-            parent.className = 'form-check editor-check user-add';
+            parent.className = 'form-check editor-check user-add-item';
             newLabel.className = 'form-check-label check-label-plain';
 
             parent.insertBefore(newLabel, input.nextSibling);
@@ -258,13 +259,14 @@ async function initialize_editor() {
     editor.on('change', function () {
         if (editor_is_ready) {
             setTimeout(() => changeStyle(), 0);
-            document.querySelector('#json-preview').textContent = JSON.stringify(editor.getValue(), null, 2);
+            jsonPreviewTextElement.textContent = JSON.stringify(editor.getValue(), null, 2);
         }
     });
     editor.on('ready', function () {
         editor_is_ready = true;
         setTimeout(() => changeStyle(), 0);
         statusBarElement.style.display = 'none';
+        jsonPreviewTextElement.wrap = "off";
     });
 }
 
@@ -280,11 +282,11 @@ function get_output(func_type) {
         let url;
         let err_message;
         if (func_type === 'main') {
-            outputElement = mainOutputElement;
+            outputElement = mainOutputTextElement;
             url = `/api/get_main_output`;
             err_message = 'Failed to get output from the main program.';
         } else if (func_type === 'save') {
-            outputElement = saveOutputElement;
+            outputElement = saveOutputTextElement;
             url = `/api${pathName}/get_save_output`;
             err_message = 'Failed to get output from the data-saving script.';
         } else {
@@ -302,7 +304,7 @@ function get_output(func_type) {
             if (outputElement.scrollTop + outputElement.clientHeight >= outputElement.scrollHeight) {
                 scroll = true;
             }
-
+            outputElement.wrap = "off";
             outputElement.value = data.output + data.error;
             if (scroll) {
                 outputElement.scrollTop = outputElement.scrollHeight;

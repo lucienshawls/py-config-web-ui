@@ -13,14 +13,14 @@
 <body>
     <nav class="navbar navbar-expand-lg bg-body-tertiary sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand mx-1" href="/">{{ title }}</a>
+            <a class="navbar-brand" href="/">{{ title }}</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                 aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
-                    <li class="nav-item mx-1 w-100 my-2 my-lg-0">
+                    <li class="nav-item mx-lg-1 w-100 my-2 my-lg-0">
                         <select class="form-select w-100" id="configSelect" onchange="navigateToConfig()"
                             aria-label="Select config">
                             {% for user_config_name, user_config in user_config_store.items() %}
@@ -30,7 +30,7 @@
                             {% endfor %}
                         </select>
                     </li>
-                    <li class="nav-item mx-1 btn-group dropdown" id="action-dropdown-group">
+                    <li class="nav-item mx-lg-1 btn-group dropdown" id="action-dropdown-group">
                         <button class="btn btn-primary save-action" type="button">Save</button>
                         <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" type="button"
                             id="navbarDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -53,48 +53,71 @@
             </div>
         </div>
     </nav>
-    <div class="mt-2" id="status-container">
-        <div class="container col-md-8" id="status-info">
-            <div class="alert alert-light" id="status-bar">
-                <div class="spinner-border text-primary" role="status" id="status-icon"></div>
-            </div>
-        </div>
-    </div>
-    <div id="flash-container">
-        <div class="container col-md-8" id="flash-messages">
-            {% for category, message in get_flashed_messages(with_categories=true) %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                <div>{{ message | safe }}</div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    <div class="container col-md-8">
-        <div id="editor-container"></div>
+    <div class="container-fluid mt-3 mb-5" id="main-page-container">
+        <div class="row justify-content-center" id="main-page">
+            <div class="col-12 col-lg-10 col-xl-8">
+                <div class="row" id="status-container">
+                    <div class="col" id="status-info">
+                        <div class="alert alert-light" id="status-bar">
+                            <div class="spinner-border text-primary" role="status" id="status-icon"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" id="flash-container">
+                    <div class="col" id="flash-messages">
+                        {% for category, message in get_flashed_messages(with_categories=true) %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            <div>{{ message | safe }}</div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="row" id="form-container">
+                    <div class="col-12 col-lg-6" id="editor">
+                        <h2>Editor</h2>
+                        <div class="row" id="editor-container"></div>
 
-        <div class="d-flex justify-content-between justify-content-lg-end" id="action-container-group">
-            <button class="btn btn-primary col-5 col-lg-2 save-action" type="button">Save</button>
-            <div class="mx-1"></div>
-            <button class="btn btn-danger col-5 col-lg-2 reset-action" type="button">Reset</button>
+                        <div class="row justify-content-between justify-content-lg-end" id="form-action-group">
+                            <div class="col-5 col-lg-4 col-xl-3">
+                                <button class="btn btn-primary w-100 save-action" type="button">Save</button>
+                            </div>
+                            <div class="col-5 col-lg-4 col-xl-3">
+                                <button class="btn btn-danger w-100 reset-action" type="button">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-6" id="dashboard">
+                        <div class="row" id="json-preview">
+                            <div class="col">
+                                <h2>Preview json</h2>
+                                <button class="btn btn-primary w-100" type="button" disabled>Edit json</button>
+                                <textarea id="json-preview-text" class="form-control code-text" title="Preview json"
+                                    placeholder="After the editor is loaded, the corresponding json string will show here."
+                                    disabled></textarea>
+                            </div>
+                        </div>
+                        <div class="row" id="save-output">
+                            <div class="col">
+                                <h2>Output of data-saving script</h2>
+                                <textarea id="save-output-text" class="form-control code-text"
+                                    title="Output of data-saving script"
+                                    placeholder="After you save the current config, the output will show here. Resets when refreshing the page."
+                                    disabled></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" id="main-output">
+                    <div class="col">
+                        <h2>Output of main program</h2>
+                        <textarea id="main-output-text" class="form-control code-text" title="Output of main program"
+                            placeholder="After you launch the main program, the output will show here. Resets when refreshing the page."
+                            disabled></textarea>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="my-1">
-            <h2>Preview json</h2>
-            <textarea id="json-preview" class="form-control" title="Preview json" placeholder="" disabled></textarea>
-        </div>
-        <div class="my-1">
-            <h2>Output of main program</h2>
-            <textarea id="main-output" class="form-control" title="Output of main program"
-                placeholder="After you launch the main program, the output will show here. Resets when refreshing the page."
-                disabled></textarea>
-        </div>
-        <div class="my-1">
-            <h2>Output of data-saving script</h2>
-            <textarea id="save-output" class="form-control" title="Output of data-saving script"
-                placeholder="After you save the current config, the output will show here. Resets when refreshing the page."
-                disabled></textarea>
-        </div>
-        <div class="mb-5"></div>
     </div>
     <script src="/static/js/jquery.slim.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
