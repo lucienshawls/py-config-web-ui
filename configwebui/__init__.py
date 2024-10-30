@@ -507,14 +507,15 @@ class ConfigEditor:
         self.server.serve_forever()
 
     def clean_up(self) -> None:
-        print("Please wait for the server to stop... ", end="", file=BASE_OUTPUT_STREAM)
+        print(f"Please wait for the server to stop...", end="", file=BASE_OUTPUT_STREAM)
         self.server.shutdown()
         self.server_thread.join()
-        print("Server stopped.", file=BASE_OUTPUT_STREAM)
+        print(f'\rServer stopped.{" "*25}', file=BASE_OUTPUT_STREAM)
 
+        print(f"Restoring stdout and stderr...", end="", file=BASE_OUTPUT_STREAM)
         sys.stdout = BASE_OUTPUT_STREAM
         sys.stderr = BASE_ERROR_STREAM
-        print("STDOUT and STDERR has been restored.")
+        print(f'\rRestored stdout and stderr.{" "*5}')
         print("Please wait for the remaining threads to stop...")
         for user_config_name in self.get_user_config_names():
             self.get_user_config(user_config_name).save_func_runner.wait_for_join()
@@ -527,7 +528,7 @@ class ConfigEditor:
             f'{host if host!="0.0.0.0" and host!="[::]" else "localhost"}'
             f'{f":{port}" if port!=80 else ""}/'
         )
-        print(f"Config Editor URL: {url}")
+        print(f"Config Editor () URL: {url}")
         print("Open the above link in your browser if it does not pop up.")
         print("\nPress Ctrl+C to stop.")
         if not self.app.config["DEBUG"]:
