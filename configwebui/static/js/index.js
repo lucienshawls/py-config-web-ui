@@ -4,6 +4,7 @@ let editor_is_ready = false;
 const statusIconDisappearDelay = 400;
 const pathName = window.location.pathname;
 const configRoot = pathName.split('/').pop();
+const navbarCollapseElement = document.querySelector("#navbarNav");
 
 const editorLoadingIconElement = document.querySelector('#editor-loading-icon');
 const editorLoadingIconElementBaseClassName = editorLoadingIconElement.className;
@@ -139,6 +140,13 @@ function navigateToConfig() {
     } else {
         window.location.href = '/';
     }
+}
+
+function collapseNavbar() {
+    const bsCollapse = new bootstrap.Collapse(navbarCollapseElement, {
+        toggle: false
+    });
+    bsCollapse.hide();
 }
 
 async function getConfigAndSchema() {
@@ -377,6 +385,7 @@ function get_output(func_type) {
 const saveActionButtons = document.querySelectorAll('.save-action');
 saveActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
+        collapseNavbar();
         if (await saveConfig()) {
             get_output('save');
         }
@@ -386,6 +395,7 @@ saveActionButtons.forEach(button => {
 const resetActionButtons = document.querySelectorAll('.reset-action');
 resetActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
+        collapseNavbar();
         await reload();
     });
 });
@@ -393,6 +403,7 @@ resetActionButtons.forEach(button => {
 const launchActionButtons = document.querySelectorAll('.launch-action');
 launchActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
+        collapseNavbar();
         if (await launch()) {
             get_output('main');
         }
@@ -402,6 +413,7 @@ launchActionButtons.forEach(button => {
 const terminateActionButtons = document.querySelectorAll('.terminate-action');
 terminateActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
+        collapseNavbar();
         await terminate();
     });
 });
