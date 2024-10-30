@@ -12,6 +12,11 @@ html * {
     scroll-margin-top: 5rem;
 }
 
+h2>.spinner-border {
+    --bs-spinner-border-width: 0.2em;
+    display: none;
+}
+
 #editor-container .editor-check {
     padding-left: 0;
 }
@@ -101,13 +106,13 @@ html * {
 }
 
 #json-preview-text {
-    height: 40rem;
+    min-height: 40rem;
 }
 
 #save-output-text {
-    height: 20rem;
+    min-height: 20rem;
 }
 
 #main-output-text {
-    height: 30rem;
+    min-height: 30rem;
 }

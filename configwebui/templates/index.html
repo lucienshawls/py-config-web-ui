@@ -56,13 +56,6 @@
     <div class="container-fluid mt-3 mb-5" id="main-page-container">
         <div class="row justify-content-center" id="main-page">
             <div class="col-12 col-lg-10 col-xl-8">
-                <div class="row" id="status-container">
-                    <div class="col" id="status-info">
-                        <div class="alert alert-light" id="status-bar">
-                            <div class="spinner-border text-primary" role="status" id="status-icon"></div>
-                        </div>
-                    </div>
-                </div>
                 <div class="row" id="flash-container">
                     <div class="col" id="flash-messages">
                         {% for category, message in get_flashed_messages(with_categories=true) %}
@@ -75,7 +68,10 @@
                 </div>
                 <div class="row" id="form-container">
                     <div class="col-12 col-lg-6" id="editor">
-                        <h2>Editor</h2>
+                        <h2>
+                            Editor
+                            <span class="spinner-border text-primary" role="status" id="editor-loading-icon"></span>
+                        </h2>
                         <div class="row" id="editor-container"></div>
 
                         <div class="row justify-content-between justify-content-lg-end" id="form-action-group">
@@ -94,26 +90,34 @@
                                 <button class="btn btn-primary w-100" type="button" disabled>Edit json</button>
                                 <textarea id="json-preview-text" class="form-control code-text" title="Preview json"
                                     placeholder="After the editor is loaded, the corresponding json string will show here."
-                                    disabled></textarea>
+                                    readonly></textarea>
                             </div>
                         </div>
                         <div class="row" id="save-output">
                             <div class="col">
-                                <h2>Output of data-saving script</h2>
+                                <h2>
+                                    Output of data-saving script
+                                    <span class="spinner-border text-primary" role="status"
+                                        id="saving-script-running-icon"></span>
+                                </h2>
                                 <textarea id="save-output-text" class="form-control code-text"
                                     title="Output of data-saving script"
                                     placeholder="After you save the current config, the output will show here. Resets when refreshing the page."
-                                    disabled></textarea>
+                                    readonly></textarea>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="row" id="main-output">
                     <div class="col">
-                        <h2>Output of main program</h2>
+                        <h2>
+                            Output of main program
+                            <span class="spinner-border text-primary" role="status"
+                                id="main-program-running-icon"></span>
+                        </h2>
                         <textarea id="main-output-text" class="form-control code-text" title="Output of main program"
                             placeholder="After you launch the main program, the output will show here. Resets when refreshing the page."
-                            disabled></textarea>
+                            readonly></textarea>
                     </div>
                 </div>
             </div>

@@ -1,13 +1,27 @@
 'use strict';
 let editor;
 let editor_is_ready = false;
+const statusIconDisappearDelay = 400;
 const pathName = window.location.pathname;
 const configRoot = pathName.split('/').pop();
-const statusBarElement = document.querySelector('#status-bar');
-const statusIconElement = document.querySelector('#status-icon');
+
+const editorLoadingIconElement = document.querySelector('#editor-loading-icon');
+const editorLoadingIconElementBaseClassName = editorLoadingIconElement.className;
+
+const savingScriptRunningIconElement = document.querySelector('#saving-script-running-icon');
+const savingScriptRunningIconElementBaseClassName = savingScriptRunningIconElement.className;
+
+const mainProgramRunningIconElement = document.querySelector('#main-program-running-icon');
+const mainProgramRunningIconElementBaseClassName = mainProgramRunningIconElement.className;
+
 const jsonPreviewTextElement = document.querySelector('#json-preview-text');
-const mainOutputTextElement = document.querySelector('#main-output-text');
+const jsonPreviewTextElementBaseClassName = jsonPreviewTextElement.className;
+
 const saveOutputTextElement = document.querySelector('#save-output-text');
+const saveOutputTextElementBaseClassName = saveOutputTextElement.className;
+
+const mainOutputTextElement = document.querySelector('#main-output-text');
+const mainOutputTextElementBaseClassName = mainOutputTextElement.className;
 
 function flashMessage(message, category) {
     const flashMessageElement = document.querySelector('#flash-messages');
@@ -136,16 +150,16 @@ async function getConfigAndSchema() {
         res.config = data.config;
         res.schema = data.schema;
         if (data.success) {
-            statusIconElement.className = 'spinner-border text-success';
+            editorLoadingIconElement.className = editorLoadingIconElementBaseClassName + ' text-success';
         }
         else {
-            statusIconElement.className = 'spinner-border text-danger';
+            editorLoadingIconElement.className = editorLoadingIconElementBaseClassName + ' text-danger';
             flashMessage('Failed to get config from server', 'danger');
         }
     }
     catch (error) {
         flashMessage('Failed to get config from server', 'danger');
-        statusIconElement.className = 'spinner-border text-danger';
+        editorLoadingIconElement.className = editorLoadingIconElementBaseClassName + ' text-danger';
     }
     return res;
 }
@@ -218,7 +232,7 @@ async function launch() {
         }
         return data.success;
     } catch (error) {
-        flashMessage('Failed to launch main program. Check your python backend.', 'danger');
+        flashMessage('Failed to launch main program. Checkout your python backend.', 'danger');
         return false;
     }
 }
@@ -236,8 +250,8 @@ async function terminate() {
 }
 
 async function initialize_editor() {
-    statusIconElement.className = 'spinner-border text-primary';
-    statusBarElement.style.display = 'block';
+    editorLoadingIconElement.className = editorLoadingIconElementBaseClassName + ' text-primary';
+    editorLoadingIconElement.style.display = 'inline-block';
     const configAndSchema = await getConfigAndSchema();
     const myschema = configAndSchema.schema;
     const myconfig = configAndSchema.config;
@@ -259,13 +273,15 @@ async function initialize_editor() {
     editor.on('change', function () {
         if (editor_is_ready) {
             setTimeout(() => changeStyle(), 0);
-            jsonPreviewTextElement.textContent = JSON.stringify(editor.getValue(), null, 2);
+            jsonPreviewTextElement.value = JSON.stringify(editor.getValue(), null, 2);
         }
     });
     editor.on('ready', function () {
         editor_is_ready = true;
         setTimeout(() => changeStyle(), 0);
-        statusBarElement.style.display = 'none';
+        setTimeout(() => {
+            editorLoadingIconElement.style.display = 'none';
+        }, statusIconDisappearDelay)
         jsonPreviewTextElement.wrap = "off";
     });
 }
@@ -274,23 +290,35 @@ initialize_editor();
 
 function get_output(func_type) {
     let complete = true;
+    let outputTextElement;
+    let outputTextElementBaseClassName;
+    let runningIconElement;
+    let runningIconElementBaseClassName;
+    let url;
+    let err_message;
+    if (func_type === 'main') {
+        outputTextElement = mainOutputTextElement;
+        outputTextElementBaseClassName = mainOutputTextElementBaseClassName;
+        runningIconElement = mainProgramRunningIconElement;
+        runningIconElementBaseClassName = mainProgramRunningIconElementBaseClassName;
+        url = `/api/get_main_output`;
+        err_message = 'Failed to get output from the main program.';
+    } else if (func_type === 'save') {
+        outputTextElement = saveOutputTextElement;
+        outputTextElementBaseClassName = saveOutputTextElementBaseClassName;
+        runningIconElement = savingScriptRunningIconElement;
+        runningIconElementBaseClassName = savingScriptRunningIconElementBaseClassName;
+        url = `/api${pathName}/get_save_output`;
+        err_message = 'Failed to get output from the data-saving script.';
+    } else {
+        return;
+    }
+    runningIconElement.className = runningIconElementBaseClassName + ' text-primary';
+    runningIconElement.style.display = 'inline-block';
+    outputTextElement.value = '';
+    outputTextElement.className = outputTextElementBaseClassName;
     const intervalId = setInterval(async () => {
         if (!complete) {
-            return;
-        }
-        let outputElement;
-        let url;
-        let err_message;
-        if (func_type === 'main') {
-            outputElement = mainOutputTextElement;
-            url = `/api/get_main_output`;
-            err_message = 'Failed to get output from the main program.';
-        } else if (func_type === 'save') {
-            outputElement = saveOutputTextElement;
-            url = `/api${pathName}/get_save_output`;
-            err_message = 'Failed to get output from the data-saving script.';
-        } else {
-            clearInterval(intervalId);
             return;
         }
         try {
@@ -301,19 +329,45 @@ function get_output(func_type) {
             const data = await response.json();
 
             let scroll = false;
-            if (outputElement.scrollTop + outputElement.clientHeight >= outputElement.scrollHeight) {
+            if (outputTextElement.scrollTop + outputTextElement.clientHeight >= outputTextElement.scrollHeight) {
                 scroll = true;
             }
-            outputElement.wrap = "off";
-            outputElement.value = data.output + data.error;
-            if (scroll) {
-                outputElement.scrollTop = outputElement.scrollHeight;
+            outputTextElement.wrap = "off";
+            outputTextElement.value += data.output;
+            if (data.has_warning) {
+                runningIconElement.className = runningIconElementBaseClassName + ' text-warning';
+                outputTextElement.className = outputTextElementBaseClassName + ' text-warning';
             }
-            if (!data.running) {
+            if (data.running) {
+                outputTextElement.value += data.error
+            } else {
+                if (data.state) {
+                    if (!data.has_warning) {
+                        outputTextElement.className = outputTextElementBaseClassName + ' text-success';
+                        runningIconElement.className = runningIconElementBaseClassName + ' text-success';
+                    }
+                } else {
+                    outputTextElement.className = outputTextElementBaseClassName + ' text-danger';
+                    runningIconElement.className = runningIconElementBaseClassName + ' text-danger';
+                }
+                for (const message of data.messages) {
+                    outputTextElement.value += '\n' + message;
+                }
+                setTimeout(() => {
+                    runningIconElement.style.display = 'none';
+                }, statusIconDisappearDelay);
                 clearInterval(intervalId);
             }
+            if (scroll) {
+                outputTextElement.scrollTop = outputTextElement.scrollHeight;
+            }
         } catch (error) {
+            outputTextElement.className = outputTextElementBaseClassName + ' text-danger';
+            runningIconElement.className = runningIconElementBaseClassName + ' text-danger';
             flashMessage(err_message, 'danger');
+            setTimeout(() => {
+                runningIconElement.style.display = 'none';
+            }, statusIconDisappearDelay);
             clearInterval(intervalId);
         }
         complete = true;

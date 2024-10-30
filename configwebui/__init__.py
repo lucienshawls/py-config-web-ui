@@ -13,6 +13,7 @@ import sys
 import time
 import logging
 import threading
+import traceback
 import webbrowser
 from flask import Flask
 from io import StringIO
@@ -29,6 +30,58 @@ READ_STREAM_INTERVAL = 0.01
 BASE_OUTPUT_STREAM = sys.stdout
 BASE_ERROR_STREAM = sys.stderr
 logging.getLogger("werkzeug").disabled = True
+
+
+class ResultStatus:
+    def set_status(self, status: bool) -> None:
+        self.status = bool(status)
+
+    def get_status(self) -> bool:
+        return self.status
+
+    def add_message(self, message: str) -> None:
+        self.messages.append(str(message))
+
+    def get_messages(self) -> list:
+        return self.messages
+
+    def __init__(self, status: bool, message: list[str] | str = None) -> None:
+        self.set_status(status)
+        self.messages = []
+        if message is None:
+            return
+        if isinstance(message, list):
+            for m in message:
+                self.add_message(str(m))
+        elif isinstance(message, str):
+            self.add_message(message)
+        else:
+            raise TypeError(
+                f"message must be a string or a list of strings, not {type(message)}"
+            )
+
+    def copy(self) -> "ResultStatus":
+        res = ResultStatus(self.status)
+        for message in self.messages:
+            res.add_message(message)
+        return res
+
+    def __bool__(self) -> bool:
+        return self.status
+
+    def __repr__(self) -> str:
+        if len(self.messages) == 0:
+            return f"ResultStatus(status={self.status}, messages=[])"
+        else:
+            formatted_messages = ",\n\t".join(self.messages)
+            return f"ResultStatus(status={self.status}, messages=[\n\t{formatted_messages}\n])"
+
+    def __str__(self) -> str:
+        if len(self.messages) == 0:
+            return f'Current status: {"Success" if self.status else "Fail"}, Messages: (No messages).\n'
+        else:
+            formatted_messages = ",\n\t".join(self.messages)
+            return f'Current status: {"Success" if self.status else "Fail"}, Messages:\n\t{formatted_messages}\n'
 
 
 class ThreadOutputStream:
@@ -63,7 +116,9 @@ class ProgramRunner:
             )
         self.function = function
 
+        self.warning_occurred = False
         self.running = False
+        self.res = ResultStatus(True)
         self.hide_terminal_output = hide_terminal_output
         self.hide_terminal_error = hide_terminal_error
 
@@ -78,11 +133,7 @@ class ProgramRunner:
     def capture_output(self) -> None:
         pointer_out = 0
         pointer_err = 0
-        capture_complete = False
-        while True:
-            if not self.program_thread.is_alive():
-                capture_complete = True
-
+        while self.running:
             self.io_out.seek(pointer_out)
             new_out = self.io_out.read()
             pointer_out += len(new_out)
@@ -104,10 +155,8 @@ class ProgramRunner:
 
                 self.error += new_err
                 self.recently_added_error += new_err
-
-                if capture_complete:
-                    self.running = False
-                    break
+                if new_err != "":
+                    self.warning_occurred = True
             time.sleep(READ_STREAM_INTERVAL)
 
     def run_in_separate_context(self, *args, **kwargs) -> None:
@@ -115,10 +164,41 @@ class ProgramRunner:
             sys.stdout.add_stream(threading.current_thread().name, self.io_out)
         if isinstance(sys.stderr, ThreadOutputStream):
             sys.stderr.add_stream(threading.current_thread().name, self.io_err)
-        self.function(*args, **kwargs)
+        try:
+            res: ResultStatus | bool = self.function(*args, **kwargs)
+            self.running = False
+            self.capture_thread.join()
+            with self.lock:
+                if isinstance(res, ResultStatus):
+                    self.res = res.copy()
+                    if len(self.res.get_messages()) == 0:
+                        self.res.add_message("Success.")
+                elif isinstance(res, bool):
+                    if not res:
+                        self.res.set_status(False)
+                        self.res.add_message("Failed.")
+                    else:
+                        self.res.add_message("Success.")
+                else:
+                    self.res.add_message("Success.")
+
+        except Exception as e:
+            self.running = False
+            self.capture_thread.join()
+            with self.lock:
+                self.res.set_status(False)
+                self.res.add_message(
+                    "".join(traceback.format_exception_only(type(e), e)).strip()
+                )
+                new_err = traceback.format_exc()
+                self.error += new_err
+                self.recently_added_error += new_err
+
+                if not self.hide_terminal_error:
+                    print(new_err, end="", file=BASE_ERROR_STREAM)
 
     def run(self, *args, **kwargs) -> None:
-        if self.running:
+        if hasattr(self, "program_thread") and self.program_thread.is_alive():
             return ResultStatus(False, "Program is already running")
         self.output = ""
         self.recently_added_output = ""
@@ -130,6 +210,8 @@ class ProgramRunner:
         self.io_err = StringIO()
 
         self.running = True
+        self.warning_occurred = False
+        self.res = ResultStatus(True)
         self.program_thread = threading.Thread(
             target=self.run_in_separate_context, args=args, kwargs=kwargs
         )
@@ -156,61 +238,23 @@ class ProgramRunner:
             self.recently_added_error = ""
         return error
 
-    def wait_for_join(self) -> None:
-        if hasattr(self, "program_thread"):
-            self.program_thread.join()
-        if hasattr(self, "capture_thread"):
-            self.capture_thread.join()
+    def get_res(self) -> ResultStatus:
+        with self.lock:
+            return self.res
+
+    def has_warning(self) -> bool:
+        with self.lock:
+            return self.warning_occurred
 
     def is_running(self) -> bool:
         with self.lock:
             return self.running
 
-
-class ResultStatus:
-    def set_status(self, status: bool) -> None:
-        self.status = bool(status)
-
-    def get_status(self) -> bool:
-        return self.status
-
-    def add_message(self, message: str) -> None:
-        self.messages.append(str(message))
-
-    def get_messages(self) -> list:
-        return self.messages
-
-    def __init__(self, status: bool, message: list[str] | str = None) -> None:
-        self.set_status(status)
-        self.messages = []
-        if message is None:
-            return
-        if isinstance(message, list):
-            for m in message:
-                self.add_message(str(m))
-        elif isinstance(message, str):
-            self.add_message(message)
-        else:
-            raise TypeError(
-                f"message must be a string or a list of strings, not {type(message)}"
-            )
-
-    def __bool__(self) -> bool:
-        return self.status
-
-    def __repr__(self) -> str:
-        if len(self.messages) == 0:
-            return f"ResultStatus(status={self.status}, messages=[])"
-        else:
-            formatted_messages = ",\n\t".join(self.messages)
-            return f"ResultStatus(status={self.status}, messages=[\n\t{formatted_messages}\n])"
-
-    def __str__(self) -> str:
-        if len(self.messages) == 0:
-            return f'Current status: {"Success" if self.status else "Fail"}, Messages: (No messages).\n'
-        else:
-            formatted_messages = ",\n\t".join(self.messages)
-            return f'Current status: {"Success" if self.status else "Fail"}, Messages:\n\t{formatted_messages}\n'
+    def wait_for_join(self) -> None:
+        if hasattr(self, "program_thread"):
+            self.program_thread.join()
+        if hasattr(self, "capture_thread"):
+            self.capture_thread.join()
 
 
 class UserConfig:

@@ -191,13 +191,20 @@ def get_save_output(user_config_name):
         user_config_object = current_config_editor.get_user_config(
             user_config_name=user_config_name
         )
+        res = user_config_object.save_func_runner.get_res()
         return make_response(
             {
                 "success": True,
-                "messages": [""],
+                "messages": res.get_messages(),
+                "state": res.get_status(),
+                "has_warning": user_config_object.save_func_runner.has_warning(),
                 "running": user_config_object.save_func_runner.is_running(),
-                "output": user_config_object.save_func_runner.get_output(),
-                "error": user_config_object.save_func_runner.get_error(),
+                "output": user_config_object.save_func_runner.get_output(
+                    recent_only=True
+                ),
+                "error": user_config_object.save_func_runner.get_error(
+                    recent_only=True
+                ),
             },
             200,
         )
@@ -206,13 +213,20 @@ def get_save_output(user_config_name):
 @main.route("/api/get_main_output")
 def get_main_output():
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
+    res = current_config_editor.main_entry_runner.get_res()
     return make_response(
         {
             "success": True,
-            "messages": [""],
+            "messages": res.get_messages(),
+            "state": res.get_status(),
+            "has_warning": current_config_editor.main_entry_runner.has_warning(),
             "running": current_config_editor.main_entry_runner.is_running(),
-            "output": current_config_editor.main_entry_runner.get_output(),
-            "error": current_config_editor.main_entry_runner.get_error(),
+            "output": current_config_editor.main_entry_runner.get_output(
+                recent_only=True
+            ),
+            "error": current_config_editor.main_entry_runner.get_error(
+                recent_only=True
+            ),
         },
         200,
     )
