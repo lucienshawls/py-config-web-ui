@@ -240,7 +240,7 @@ async function launch() {
         }
         return data.success;
     } catch (error) {
-        flashMessage('Failed to launch main program. Checkout your python backend.', 'danger');
+        flashMessage('Failed to launch the main program. Checkout your python backend.', 'danger');
         return false;
     }
 }
