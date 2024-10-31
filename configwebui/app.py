@@ -199,10 +199,7 @@ def get_save_output(user_config_name):
                 "state": res.get_status(),
                 "has_warning": user_config_object.save_func_runner.has_warning(),
                 "running": user_config_object.save_func_runner.is_running(),
-                "output": user_config_object.save_func_runner.get_output(
-                    recent_only=True
-                ),
-                "error": user_config_object.save_func_runner.get_error(
+                "combined_output": user_config_object.save_func_runner.get_combined_output(
                     recent_only=True
                 ),
             },
@@ -221,10 +218,7 @@ def get_main_output():
             "state": res.get_status(),
             "has_warning": current_config_editor.main_entry_runner.has_warning(),
             "running": current_config_editor.main_entry_runner.is_running(),
-            "output": current_config_editor.main_entry_runner.get_output(
-                recent_only=True
-            ),
-            "error": current_config_editor.main_entry_runner.get_error(
+            "combined_output": current_config_editor.main_entry_runner.get_combined_output(
                 recent_only=True
             ),
         },

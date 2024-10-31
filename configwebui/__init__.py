@@ -26,7 +26,6 @@ from .__metadata__ import *
 
 SERVER_TIMEOUT = 3
 DAEMON_CHECK_INTERVAL = 1
-READ_STREAM_INTERVAL = 0.01
 BASE_OUTPUT_STREAM = sys.stdout
 BASE_ERROR_STREAM = sys.stderr
 logging.getLogger("werkzeug").disabled = True
@@ -87,20 +86,65 @@ class ResultStatus:
 class ThreadOutputStream:
     def __init__(self, base_stream: StringIO) -> None:
         self.base_stream = base_stream
-        self.streams: dict[str, StringIO] = {}
 
-    def add_stream(self, thread_id: int, stream: StringIO) -> None:
+        self.streams: dict[str, StringIO] = {}
+        self.streams_to_terminal: dict[str, bool] = {}
+        self.streams_lock: dict[str, threading.Lock] = {}
+
+        self.shared_streams: dict[str, StringIO] = {}
+        self.shared_streams_lock: dict[str, threading.Lock] = {}
+
+        self.lock = threading.Lock()
+
+    def add_stream(
+        self,
+        thread_id: str,
+        stream: StringIO,
+        lock: threading.Lock = threading.Lock(),
+        to_terminal: bool = False,
+    ) -> None:
         self.streams[thread_id] = stream
+        self.streams_to_terminal[thread_id] = to_terminal
+        self.streams_lock[thread_id] = lock
+
+    def add_shared_stream(
+        self,
+        thread_id: str,
+        shared_stream: StringIO,
+        shared_lock: threading.Lock = threading.Lock(),
+    ) -> None:
+        self.shared_streams[thread_id] = shared_stream
+        self.shared_streams_lock[thread_id] = shared_lock
 
     def write(self, message: str) -> None:
-        key = threading.current_thread().name
-        stream = self.streams.get(key, self.base_stream)
-        stream.write(message)
+        thread_id = threading.current_thread().name
+        stream = self.streams.get(thread_id, self.base_stream)
+        lock = self.streams_lock.get(thread_id, self.lock)
+        with lock:
+            stream.write(message)
+        if self.streams_to_terminal.get(thread_id, False):
+            with self.lock:
+                self.base_stream.write(message)
+        shared_stream = self.shared_streams.get(thread_id, None)
+        shared_lock = self.shared_streams_lock.get(thread_id, None)
+        if (shared_stream is not None) and (shared_lock is not None):
+            with shared_lock:
+                shared_stream.write(message)
 
     def flush(self) -> None:
-        key = threading.current_thread().name
-        stream = self.streams.get(key, self.base_stream)
-        stream.flush()
+        thread_id = threading.current_thread().name
+        stream = self.streams.get(thread_id, self.base_stream)
+        lock = self.streams_lock.get(thread_id, self.lock)
+        with lock:
+            stream.flush()
+        if self.streams_to_terminal.get(thread_id, False):
+            with self.lock:
+                self.base_stream.flush()
+        shared_stream = self.shared_streams.get(thread_id, None)
+        shared_lock = self.shared_streams_lock.get(thread_id, None)
+        if (shared_stream is not None) and (shared_lock is not None):
+            with shared_lock:
+                shared_stream.flush()
 
 
 class ProgramRunner:
@@ -123,6 +167,9 @@ class ProgramRunner:
         self.hide_terminal_error = hide_terminal_error
 
         self.lock = threading.Lock()
+        self.output_lock = threading.Lock()
+        self.error_lock = threading.Lock()
+        self.combined_output_lock = threading.Lock()
 
         self.output = ""
         self.recently_added_output = ""
@@ -130,44 +177,72 @@ class ProgramRunner:
         self.error = ""
         self.recently_added_error = ""
 
+        self.combined_output = ""
+        self.recently_added_combined_output = ""
+
     def capture_output(self) -> None:
-        pointer_out = 0
-        pointer_err = 0
-        while self.running:
-            self.io_out.seek(pointer_out)
-            new_out = self.io_out.read()
-            pointer_out += len(new_out)
-            self.io_out.seek(pointer_out)
-            if not self.hide_terminal_output:
-                print(new_out, end="", file=BASE_OUTPUT_STREAM)
+        if not self.running:
+            return None
+        with self.output_lock:
+            new_out = self.io_out.getvalue()
+            if new_out != "":
+                self.io_out.truncate(0)
+                self.io_out.seek(0)
+        with self.error_lock:
+            new_err = self.io_err.getvalue()
+            if new_err != "":
+                self.io_err.truncate(0)
+                self.io_err.seek(0)
+        with self.combined_output_lock:
+            new_combined = self.io_combined.getvalue()
+            if new_combined != "":
+                self.io_combined.truncate(0)
+                self.io_combined.seek(0)
 
-            self.io_err.seek(pointer_err)
-            new_err = self.io_err.read()
-            pointer_err += len(new_err)
-            self.io_err.seek(pointer_err)
+        with self.lock:
+            self.output += new_out
+            self.recently_added_output += new_out
 
-            if not self.hide_terminal_error:
-                print(new_err, end="", file=BASE_ERROR_STREAM)
+            self.error += new_err
+            self.recently_added_error += new_err
 
-            with self.lock:
-                self.output += new_out
-                self.recently_added_output += new_out
+            self.combined_output += new_combined
+            self.recently_added_combined_output += new_combined
 
-                self.error += new_err
-                self.recently_added_error += new_err
-                if new_err != "":
-                    self.warning_occurred = True
-            time.sleep(READ_STREAM_INTERVAL)
+            if new_err != "":
+                self.warning_occurred = True
 
     def run_in_separate_context(self, *args, **kwargs) -> None:
-        if isinstance(sys.stdout, ThreadOutputStream):
-            sys.stdout.add_stream(threading.current_thread().name, self.io_out)
-        if isinstance(sys.stderr, ThreadOutputStream):
-            sys.stderr.add_stream(threading.current_thread().name, self.io_err)
+        thread_id = threading.current_thread().name
+        assert isinstance(sys.stdout, ThreadOutputStream), "Failed to hijack stdout."
+        assert isinstance(sys.stderr, ThreadOutputStream), "Failed to hijack stderr."
+        sys.stdout.add_stream(
+            thread_id=thread_id,
+            stream=self.io_out,
+            lock=self.output_lock,
+            to_terminal=not self.hide_terminal_output,
+        )
+        sys.stdout.add_shared_stream(
+            thread_id=thread_id,
+            shared_stream=self.io_combined,
+            shared_lock=self.combined_output_lock,
+        )
+        sys.stderr.add_stream(
+            thread_id=thread_id,
+            stream=self.io_err,
+            lock=self.error_lock,
+            to_terminal=not self.hide_terminal_error,
+        )
+        sys.stderr.add_shared_stream(
+            thread_id=thread_id,
+            shared_stream=self.io_combined,
+            shared_lock=self.combined_output_lock,
+        )
         try:
             res: ResultStatus | bool = self.function(*args, **kwargs)
-            self.running = False
-            self.capture_thread.join()
+            sys.stdout.flush()
+            sys.stderr.flush()
+            self.capture_output()
             with self.lock:
                 if isinstance(res, ResultStatus):
                     self.res = res.copy()
@@ -181,10 +256,12 @@ class ProgramRunner:
                         self.res.add_message("Success.")
                 else:
                     self.res.add_message("Success.")
+            self.running = False
 
         except Exception as e:
-            self.running = False
-            self.capture_thread.join()
+            sys.stdout.flush()
+            sys.stderr.flush()
+            self.capture_output()
             with self.lock:
                 self.res.set_status(False)
                 self.res.add_message(
@@ -196,6 +273,7 @@ class ProgramRunner:
 
                 if not self.hide_terminal_error:
                     print(new_err, end="", file=BASE_ERROR_STREAM)
+            self.running = False
 
     def run(self, *args, **kwargs) -> None:
         if hasattr(self, "program_thread") and self.program_thread.is_alive():
@@ -206,8 +284,12 @@ class ProgramRunner:
         self.error = ""
         self.recently_added_error = ""
 
+        self.combined_output = ""
+        self.recently_added_combined_output = ""
+
         self.io_out = StringIO()
         self.io_err = StringIO()
+        self.io_combined = StringIO()
 
         self.running = True
         self.warning_occurred = False
@@ -215,12 +297,11 @@ class ProgramRunner:
         self.program_thread = threading.Thread(
             target=self.run_in_separate_context, args=args, kwargs=kwargs
         )
-        self.capture_thread = threading.Thread(target=self.capture_output)
         self.program_thread.start()
-        self.capture_thread.start()
         return ResultStatus(True)
 
     def get_output(self, recent_only: bool = False) -> str:
+        self.capture_output()
         with self.lock:
             if bool(recent_only):
                 output = self.recently_added_output
@@ -230,6 +311,7 @@ class ProgramRunner:
         return output
 
     def get_error(self, recent_only: bool = False) -> str:
+        self.capture_output()
         with self.lock:
             if bool(recent_only):
                 error = self.recently_added_error
@@ -237,6 +319,16 @@ class ProgramRunner:
                 error = self.error
             self.recently_added_error = ""
         return error
+
+    def get_combined_output(self, recent_only: bool = False) -> str:
+        self.capture_output()
+        with self.lock:
+            if bool(recent_only):
+                combined_output = self.recently_added_combined_output
+            else:
+                combined_output = self.combined_output
+            self.recently_added_combined_output = ""
+        return combined_output
 
     def get_res(self) -> ResultStatus:
         with self.lock:
@@ -253,8 +345,6 @@ class ProgramRunner:
     def wait_for_join(self) -> None:
         if hasattr(self, "program_thread"):
             self.program_thread.join()
-        if hasattr(self, "capture_thread"):
-            self.capture_thread.join()
 
 
 class UserConfig:
@@ -507,6 +597,7 @@ class ConfigEditor:
         self.server.serve_forever()
 
     def clean_up(self) -> None:
+        print("\nCleaning up...", file=BASE_OUTPUT_STREAM)
         print(f"Please wait for the server to stop...", end="", file=BASE_OUTPUT_STREAM)
         self.server.shutdown()
         self.server_thread.join()
@@ -531,8 +622,7 @@ class ConfigEditor:
         print(f"Config Editor () URL: {url}")
         print("Open the above link in your browser if it does not pop up.")
         print("\nPress Ctrl+C to stop.")
-        if not self.app.config["DEBUG"]:
-            threading.Timer(1, lambda: webbrowser.open(url)).start()
+        threading.Timer(interval=1, function=webbrowser.open, args=(url,)).start()
         setdefaulttimeout(SERVER_TIMEOUT)
         self.server = make_server(host, port, self.app)
 

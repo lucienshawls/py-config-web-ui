@@ -325,6 +325,7 @@ function get_output(func_type) {
     runningIconElement.style.display = 'inline-block';
     outputTextElement.value = '';
     outputTextElement.className = outputTextElementBaseClassName;
+    outputTextElement.scrollTop = outputTextElement.scrollHeight;
     const intervalId = setInterval(async () => {
         if (!complete) {
             return;
@@ -337,18 +338,16 @@ function get_output(func_type) {
             const data = await response.json();
 
             let scroll = false;
-            if (outputTextElement.scrollTop + outputTextElement.clientHeight >= outputTextElement.scrollHeight) {
+            if (outputTextElement.scrollTop + outputTextElement.clientHeight >= outputTextElement.scrollHeight - 10) {
                 scroll = true;
             }
             outputTextElement.wrap = "off";
-            outputTextElement.value += data.output;
+            outputTextElement.value += data.combined_output;
             if (data.has_warning) {
                 runningIconElement.className = runningIconElementBaseClassName + ' text-warning';
                 outputTextElement.className = outputTextElementBaseClassName + ' text-warning';
             }
-            if (data.running) {
-                outputTextElement.value += data.error
-            } else {
+            if (!data.running) {
                 if (data.state) {
                     if (!data.has_warning) {
                         outputTextElement.className = outputTextElementBaseClassName + ' text-success';
