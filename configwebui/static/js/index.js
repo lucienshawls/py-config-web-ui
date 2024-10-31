@@ -281,7 +281,7 @@ async function initialize_editor() {
     editor.on('change', function () {
         if (editor_is_ready) {
             setTimeout(() => changeStyle(), 0);
-            jsonPreviewTextElement.value = JSON.stringify(editor.getValue(), null, 2);
+            jsonPreviewTextElement.value = JSON.stringify(editor.getValue(), null, 4);
         }
     });
     editor.on('ready', function () {
