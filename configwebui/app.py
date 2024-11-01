@@ -132,7 +132,7 @@ def user_config_api(user_config_name):
                     )
 
             else:
-                messages = res.get_messages()
+                messages = list(map(escape, res.get_messages()))
                 if len(messages) == 0:
                     messages = ["Submitted config did not pass all validations"]
                 return make_response({"success": False, "messages": messages}, 400)
@@ -195,7 +195,7 @@ def get_save_output(user_config_name):
         return make_response(
             {
                 "success": True,
-                "messages": res.get_messages(),
+                "messages": list(map(escape, res.get_messages())),
                 "state": res.get_status(),
                 "has_warning": user_config_object.save_func_runner.has_warning(),
                 "running": user_config_object.save_func_runner.is_running(),
@@ -214,7 +214,7 @@ def get_main_output():
     return make_response(
         {
             "success": True,
-            "messages": res.get_messages(),
+            "messages": list(map(escape, res.get_messages())),
             "state": res.get_status(),
             "has_warning": current_config_editor.main_entry_runner.has_warning(),
             "running": current_config_editor.main_entry_runner.is_running(),
