@@ -60,18 +60,18 @@ function changeCheckboxStyle() {
         newLabel.setAttribute('for', input.id);
 
         parent.removeAttribute('for');
-        if (parent.classList.contains('form-check')) {
+        if (parent.classList.contains('editor-check') || parent.classList.contains('check-list')) {
             return;
         }
 
         input.className += ' form-check-input editor-check-input';
         if (parent.tagName.toLowerCase() === 'label') {
-            input.className += ' check-input-plain';
+            input.className += ' form-check-input editor-check-input check-input-plain';
             parent.className = 'form-check editor-check';
             newLabel.className = 'form-check-label check-label-plain';
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'span') {
-            input.className += ' check-input-heading';
+            input.className += ' form-check-input editor-check-input check-input-heading';
             parent.className = 'form-check editor-check d-inline-flex';
             newLabel.className = 'form-check-label check-label-heading';
 
@@ -82,7 +82,7 @@ function changeCheckboxStyle() {
             });
             parent.insertBefore(newLabel, input.nextSibling);
         } else if (parent.tagName.toLowerCase() === 'b') {
-            input.className += ' check-input-plain';
+            input.className += ' form-check-input editor-check-input check-input-plain';
             parent.className = 'form-check editor-check user-add-item';
             newLabel.className = 'form-check-label check-label-plain';
 
@@ -92,7 +92,21 @@ function changeCheckboxStyle() {
             while (parent.firstChild) {
                 newParent.appendChild(parent.firstChild);
             }
-            parent.attributes.forEach(attr => {
+            Array.from(parent.attributes).forEach(attr => {
+                newParent.setAttribute(attr.name, attr.value);
+            });
+            parent.replaceWith(newParent);
+        } else if (parent.tagName.toLowerCase() === 'div') {
+            console.log(parent)
+            parent.className += ' check-list'
+            const formLabelElement = parent.querySelector('label[class="form-check-label"]')
+            formLabelElement.textContent = formLabelElement.textContent.trim()
+
+            const newParent = document.createElement('label');
+            while (parent.firstChild) {
+                newParent.appendChild(parent.firstChild);
+            }
+            Array.from(parent.attributes).forEach(attr => {
                 newParent.setAttribute(attr.name, attr.value);
             });
             parent.replaceWith(newParent);
