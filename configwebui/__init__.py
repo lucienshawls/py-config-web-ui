@@ -357,11 +357,11 @@ class UserConfig:
     }
 
     @staticmethod
-    def default_extra_validation_func(config: dict | list = None) -> ResultStatus:
+    def default_extra_validation_func(name: str, config: dict | list) -> ResultStatus:
         return ResultStatus(True)
 
     @staticmethod
-    def default_save_func(config: dict | list) -> ResultStatus:
+    def default_save_func(name: str, config: dict | list) -> ResultStatus:
         return ResultStatus(False, "Save function is undefined")
 
     @staticmethod
@@ -421,7 +421,7 @@ class UserConfig:
         if not (isinstance(config, list) or isinstance(config, dict)):
             result.set_status(False)
             result.add_message(
-                f"config must be a dictionary or a list, not {type(config)}"
+                f"TypeError: config must be a dictionary or a list, not {type(config)}"
             )
             return result
         if not skip_schema_validations:
@@ -432,14 +432,21 @@ class UserConfig:
                 result.add_message(f"Schema validation error: {e.message}")
                 return result
         if not skip_extra_validations:
-            extra_validation_result = self.extra_validation_func(config)
-            if isinstance(extra_validation_result, ResultStatus):
-                return extra_validation_result
-            else:
-                if not bool(extra_validation_result):
-                    result.set_status(False)
-                    result.add_message("Extra validation failed")
-                    return result
+            try:
+                extra_validation_result = self.extra_validation_func(self.name, config)
+                if isinstance(extra_validation_result, ResultStatus):
+                    return extra_validation_result
+                else:
+                    if not bool(extra_validation_result):
+                        result.set_status(False)
+                        result.add_message("Extra validation failed")
+                        return result
+            except Exception as e:
+                result.set_status(False)
+                result.add_message(
+                    "".join(traceback.format_exception_only(type(e), e)).strip()
+                )
+                return result
         return result
 
     def set_config(
@@ -450,10 +457,6 @@ class UserConfig:
     ) -> ResultStatus:
         if config is None:
             config = UserConfig.generate_default_json(self.schema)
-        if not (isinstance(config, list) or isinstance(config, dict)):
-            raise TypeError(
-                f"config must be a dictionary or a list, not {type(config)}"
-            )
         result = self.check(
             config=config,
             skip_schema_validations=skip_schema_validations,
@@ -466,7 +469,7 @@ class UserConfig:
             return result
 
     def save(self) -> ResultStatus:
-        return self.save_func_runner.run(self.config)
+        return self.save_func_runner.run(self.name, self.config)
 
     def get_name(self) -> str:
         return self.name
@@ -622,7 +625,7 @@ class ConfigEditor:
         print(f"Config Editor () URL: {url}")
         print("Open the above link in your browser if it does not pop up.")
         print("\nPress Ctrl+C to stop.")
-        threading.Timer(interval=1, function=webbrowser.open, args=(url,)).start()
+        threading.Thread(target=webbrowser.open, args=(url,)).start()
         setdefaulttimeout(SERVER_TIMEOUT)
         self.server = make_server(host, port, self.app)
 
