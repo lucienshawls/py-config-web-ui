@@ -488,8 +488,8 @@ class UserConfig:
         name: str = "user_config",
         friendly_name: str = "User Config",
         schema: dict = None,
-        extra_validation_func: Callable = default_extra_validation_func,
-        save_func: Callable = default_save_func,
+        extra_validation_func: Callable = None,
+        save_func: Callable = None,
     ) -> None:
         if not isinstance(name, str):
             raise TypeError(
@@ -501,20 +501,31 @@ class UserConfig:
                 f"friendly_name must be a string, not {type(friendly_name)}"
             )
         self.friendly_name = friendly_name
-        if not callable(extra_validation_func):
-            raise TypeError(
-                f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
+
+        if extra_validation_func is None:
+            self.extra_validation_func = UserConfig.default_extra_validation_func
+        else:
+            if not callable(extra_validation_func):
+                raise TypeError(
+                    f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
+                )
+            self.extra_validation_func = extra_validation_func
+        if save_func is None:
+            self.save_func_runner = ProgramRunner(
+                function=UserConfig.default_save_func,
+                hide_terminal_output=True,
+                hide_terminal_error=False,
             )
-        self.extra_validation_func = extra_validation_func
-        if not callable(save_func):
-            raise TypeError(
-                f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
+        else:
+            if not callable(save_func):
+                raise TypeError(
+                    f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
+                )
+            self.save_func_runner = ProgramRunner(
+                function=save_func,
+                hide_terminal_output=True,
+                hide_terminal_error=False,
             )
-        self.save_func_runner = ProgramRunner(
-            function=save_func,
-            hide_terminal_output=True,
-            hide_terminal_error=False,
-        )
         if schema is None:
             schema = {}
         if not isinstance(schema, dict):
@@ -529,23 +540,32 @@ class ConfigEditor:
         return ResultStatus(False, "Main entry is undefined")
 
     def __init__(
-        self, app_name: str = "Config Editor", main_entry: Callable = default_main_entry
+        self, app_name: str = "Config Editor", main_entry: Callable = None
     ) -> None:
         from . import app
         from .config import AppConfig
 
         if not isinstance(app_name, str):
             raise TypeError(f"app_name must be a string, not {type(app_name)}")
-        if not callable(main_entry):
-            raise TypeError(
-                f"main_entry must be a callable function, not {type(main_entry)}"
+        if main_entry is None:
+            self.main_entry_runner = ProgramRunner(
+                function=ConfigEditor.default_main_entry,
+                hide_terminal_output=False,
+                hide_terminal_error=False,
             )
+        else:
+            if not callable(main_entry):
+                raise TypeError(
+                    f"main_entry must be a callable function, not {type(main_entry)}"
+                )
+            self.main_entry_runner = ProgramRunner(
+                function=main_entry,
+                hide_terminal_output=False,
+                hide_terminal_error=False,
+            )
+
+        self.app_name = app_name
         self.running = False
-        self.main_entry_runner = ProgramRunner(
-            function=main_entry,
-            hide_terminal_output=False,
-            hide_terminal_error=False,
-        )
         self.config_store: dict[str, UserConfig] = {}
 
         flask_app = Flask(
@@ -622,7 +642,7 @@ class ConfigEditor:
             f'{host if host!="0.0.0.0" and host!="[::]" else "localhost"}'
             f'{f":{port}" if port!=80 else ""}/'
         )
-        print(f"Config Editor () URL: {url}")
+        print(f"Config Editor ({self.app_name}) URL: {url}")
         print("Open the above link in your browser if it does not pop up.")
         print("\nPress Ctrl+C to stop.")
         threading.Thread(target=webbrowser.open, args=(url,)).start()
