@@ -380,6 +380,14 @@ class UserConfig:
             ordered_schema["items"] = UserConfig.add_order(
                 schema=schema.get("items", {}), property_order=0
             )
+        elif current_type is None:
+            array_indicators = ["oneOf", "anyOf", "allOf"]
+            for array_indicator in array_indicators:
+                if array_indicator in ordered_schema:
+                    for index, item in enumerate(ordered_schema[array_indicator]):
+                        ordered_schema[array_indicator][index] = UserConfig.add_order(
+                            schema=item, property_order=0
+                        )
         return ordered_schema
 
     @staticmethod
