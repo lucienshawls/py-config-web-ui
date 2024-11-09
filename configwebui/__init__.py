@@ -491,6 +491,13 @@ class UserConfig:
     def get_config(self) -> dict | list:
         return self.config
 
+    def set_schema(self, schema: dict) -> None:
+        if schema is None:
+            schema = {}
+        if not isinstance(schema, dict):
+            raise TypeError(f"schema must be a dictionary, not {type(schema)}")
+        self.schema = UserConfig.add_order(schema)
+
     def __init__(
         self,
         name: str = "user_config",
@@ -534,11 +541,7 @@ class UserConfig:
                 hide_terminal_output=True,
                 hide_terminal_error=False,
             )
-        if schema is None:
-            schema = {}
-        if not isinstance(schema, dict):
-            raise TypeError(f"schema must be a dictionary, not {type(schema)}")
-        self.schema = UserConfig.add_order(schema)
+        self.set_schema(schema=schema)
         self.config = {}
 
 
