@@ -1,4 +1,4 @@
-from . import ConfigEditor
+from . import ConfigEditor, UserConfig
 from flask import (
     Blueprint,
     flash,
@@ -17,42 +17,85 @@ main = Blueprint("main", __name__)
 
 @main.route("/")
 @main.route("/config")
-def index():
+@main.route("/config/<config_name>")
+def index(config_name: str = None):
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
-    current_user_config_name = current_config_editor.get_user_config_names()[0]
+    if config_name is None:
+        current_user_config_name = current_config_editor.get_user_config_names()[0]
+    else:
+        if config_name not in current_config_editor.get_user_config_names():
+            flash(f"No such config: <strong>{escape(config_name)}</strong>", "danger")
+            return redirect(url_for("main.index"))
+        current_user_config_name = config_name
     current_user_config_object = current_config_editor.get_user_config(
         user_config_name=current_user_config_name
     )
+    profile_names = current_user_config_object.get_profile_names()
+    if len(profile_names) == 0:
+        current_user_config_object.add_profile(
+            name=UserConfig.DEFAULT_PROFILE_NAME, save_file=True
+        )
+        current_profile_name = UserConfig.DEFAULT_PROFILE_NAME
+    else:
+        current_profile_name = profile_names[0]
     flash(
-        f"You are currently editing: "
+        f"You are currently editing: Profile "
+        f'<a class="alert-link" href="/config/{escape(current_user_config_name)}/{escape(current_profile_name)}">'
+        f"{escape(current_profile_name)}"
+        f"</a> of "
         f'<a class="alert-link" href="/config/{escape(current_user_config_name)}">'
         f"{escape(current_user_config_object.get_friendly_name())}"
-        f"</a>",
+        f"</a>.",
         "info",
     )
     return redirect(
-        url_for("main.user_config_page", user_config_name=current_user_config_name)
+        url_for(
+            "main.user_config_page",
+            user_config_name=current_user_config_name,
+            profile_name=current_profile_name,
+        )
     )
 
 
-@main.route("/config/<user_config_name>", methods=["GET", "POST"])
-def user_config_page(user_config_name):
+@main.route("/config/<user_config_name>")
+def user_config_index(user_config_name: str):
+    return redirect(url_for("main.index"))
+
+
+@main.route("/config/<user_config_name>/<profile_name>", methods=["GET", "POST"])
+def user_config_page(user_config_name: str, profile_name: str):
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
     user_config_names = current_config_editor.get_user_config_names()
     if user_config_name not in user_config_names:
         flash(f"No such config: <strong>{escape(user_config_name)}</strong>", "danger")
         return redirect(url_for("main.index"))
-    else:
-        return render_template(
-            "index.html",
-            title=current_app.config["app_name"],
-            user_config_store=current_config_editor.config_store,
-            current_user_config_name=user_config_name,
+    user_config_object = current_config_editor.get_user_config(
+        user_config_name=user_config_name
+    )
+    if not user_config_object.has_profile(profile_name):
+        flash(
+            f"No such profile: <strong>{escape(profile_name)}</strong> in "
+            f'<a class="alert-link" href="/config/{escape(user_config_name)}">'
+            f"{escape(user_config_object.get_friendly_name())}"
+            f"</a>.",
+            "danger",
         )
+        return redirect(url_for("main.index"))
+    return render_template(
+        "index.html",
+        title=current_app.config["app_name"],
+        user_config_store=current_config_editor.config_store,
+        profile_names=user_config_object.get_profile_names(),
+        current_user_config_name=user_config_name,
+        current_profile_name=profile_name,
+    )
 
 
-@main.route("/api/config/<user_config_name>", methods=["GET", "PATCH"])
-def user_config_api(user_config_name):
+@main.route(
+    "/api/config/<user_config_name>/<profile_name>",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+)
+def user_config_api(user_config_name: str, profile_name: str):
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
     user_config_names = current_config_editor.get_user_config_names()
     if user_config_name not in user_config_names:
@@ -78,64 +121,180 @@ def user_config_api(user_config_name):
                 },
                 404,
             )
-    else:
-        user_config_object = current_config_editor.get_user_config(
-            user_config_name=user_config_name
-        )
+    user_config_object = current_config_editor.get_user_config(
+        user_config_name=user_config_name
+    )
+    if not user_config_object.has_profile(profile_name):
         if request.method == "GET":
             return make_response(
                 {
+                    "success": False,
+                    "messages": [
+                        f"No such profile: <strong>{escape(profile_name)}</strong>"
+                    ],
+                    "config": {},
+                    "schema": {},
+                },
+                404,
+            )
+        else:
+            return make_response(
+                {
+                    "success": False,
+                    "messages": [
+                        f"No such profile: <strong>{escape(profile_name)}</strong>"
+                    ],
+                },
+                404,
+            )
+
+    if request.method == "GET":
+        # Get
+        return make_response(
+            {
+                "success": True,
+                "messages": [""],
+                "config": user_config_object.get_config(profile_name=profile_name),
+                "schema": user_config_object.get_schema(),
+            },
+            200,
+        )
+    elif request.method == "POST":
+        # Add
+        data: dict[str, str] = request.get_json()
+        res_add = user_config_object.add_profile(name=data["name"], save_file=True)
+        if res_add.get_status():
+            return make_response(
+                {
                     "success": True,
-                    "messages": [""],
-                    "config": user_config_object.get_config(),
-                    "schema": user_config_object.get_schema(),
+                    "messages": [
+                        f"New profile "
+                        f'<a class="alert-link" href="/config/{escape(user_config_name)}/{escape(data["name"])}">'
+                        f"{escape(data['name'])}"
+                        f"</a> has been added to "
+                        f'<a class="alert-link" href="/config/{escape(user_config_name)}">'
+                        f"{escape(user_config_object.get_friendly_name())}"
+                        f"</a> in memory."
+                    ],
+                },
+                201,
+            )
+        else:
+            return make_response(
+                {
+                    "success": False,
+                    "messages": list(map(escape, res_add.get_messages())),
+                },
+                400,
+            )
+    elif request.method == "PUT":
+        # Rename
+        data: dict[str, str] = request.get_json()
+
+        if profile_name == data["name"]:
+            return make_response(
+                {
+                    "success": False,
+                    "messages": ["No changes detected. Please provide a new name."],
+                },
+                400,
+            )
+        res_rename = user_config_object.rename_profile(
+            old_name=profile_name, new_name=data["name"], save_file=True
+        )
+        if res_rename.get_status():
+            for message in res_rename.get_messages():
+                flash(message, "warning")
+            return make_response(
+                {
+                    "success": True,
+                    "messages": [
+                        f"Profile <strong>{escape(profile_name)}</strong> of "
+                        f'<a class="alert-link" href="/config/{escape(user_config_name)}">'
+                        f"{escape(user_config_object.get_friendly_name())}"
+                        f"</a> has been renamed to "
+                        f'<a class="alert-link" href="/config/{escape(user_config_name)}/{data["name"]}">'
+                        f'{escape(data["name"])}'
+                        f"</a>."
+                    ],
                 },
                 200,
             )
         else:
-            uploaded_config = request.json
-            user_config_object = current_config_editor.get_user_config(
-                user_config_name=user_config_name
+            return make_response(
+                {
+                    "success": False,
+                    "messages": list(map(escape, res_rename.get_messages())),
+                },
+                400,
             )
-            res = user_config_object.set_config(config=uploaded_config)
-            if res.get_status():
-                if user_config_object.save().get_status():
-                    return make_response(
-                        {
-                            "success": True,
-                            "messages": [
-                                f'<a class="alert-link" '
-                                f'href="/config/{escape(user_config_name)}">'
-                                f"{escape(user_config_object.get_friendly_name())}"
-                                f"</a> has been saved to memory.",
-                                f"A data-saving script has been successfully requested to run. "
-                                f'<a href="#save-output" class="alert-link">'
-                                f"Check it out below"
-                                f"</a>.",
-                            ],
-                        },
-                        200,
-                    )
-                else:
-                    return make_response(
-                        {
-                            "success": False,
-                            "messages": [
-                                f'<a class="alert-link" '
-                                f'href="/config/{escape(user_config_name)}">'
-                                f"{escape(user_config_object.get_friendly_name())}"
-                                f"</a> has been saved <strong>ONLY</strong> to memory.",
-                                "Last save data-saving script has not finished yet, please try again later.",
-                            ],
-                        },
-                        503,
-                    )
-
-            else:
-                messages = list(map(escape, res.get_messages()))
-                if len(messages) == 0:
-                    messages = ["Submitted config did not pass all validations"]
-                return make_response({"success": False, "messages": messages}, 400)
+    elif request.method == "PATCH":
+        # Update
+        data: dict[str, str] = request.get_json()
+        if "config" not in data:
+            return make_response(
+                {
+                    "success": False,
+                    "messages": ["No config data provided."],
+                },
+                400,
+            )
+        res_update = user_config_object.update_profile(
+            name=profile_name, config=data["config"], save_file=True
+        )
+        if res_update.get_status():
+            return make_response(
+                {
+                    "success": True,
+                    "messages": [
+                        f"Profile "
+                        f'<a class="alert-link" href="/config/{escape(user_config_name)}/{data["name"]}">'
+                        f'{escape(data["name"])}'
+                        f"</a> of "
+                        f'<a class="alert-link" href="/config/{escape(user_config_name)}">'
+                        f"{escape(user_config_object.get_friendly_name())}"
+                        f"</a> has been updated."
+                    ],
+                },
+                200,
+            )
+        else:
+            return make_response(
+                {
+                    "success": False,
+                    "messages": list(map(escape, res_update.get_messages())),
+                },
+                400,
+            )
+    elif request.method == "DELETE":
+        # Delete
+        data: dict[str, str] = request.get_json()
+        res_delete = user_config_object.delete_profile(
+            name=profile_name, save_file=True
+        )
+        if res_delete.get_status():
+            for message in res_delete.get_messages():
+                flash(message, "warning")
+            return make_response(
+                {
+                    "success": True,
+                    "messages": [
+                        f"Profile <strong>{escape(profile_name)}</strong> of "
+                        f'<a class="alert-link" href="/config/{escape(user_config_name)}">'
+                        f"{escape(user_config_object.get_friendly_name())}"
+                        f"</a> has been deleted."
+                    ],
+                },
+                200,
+            )
+        else:
+            return make_response(
+                {
+                    "success": False,
+                    "messages": list(map(escape, res_delete.get_messages())),
+                },
+                400,
+            )
 
 
 @main.route("/api/launch")
@@ -170,41 +329,6 @@ def shutdown():
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
     current_config_editor.stop_server()
     return make_response("", 204)
-
-
-@main.route("/api/config/<user_config_name>/get_save_output")
-def get_save_output(user_config_name):
-    current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
-    user_config_names = current_config_editor.get_user_config_names()
-    if user_config_name not in user_config_names:
-        return make_response(
-            {
-                "success": False,
-                "messages": [
-                    f"No such config: <strong>{escape(user_config_name)}</strong>"
-                ],
-                "output": "",
-            },
-            404,
-        )
-    else:
-        user_config_object = current_config_editor.get_user_config(
-            user_config_name=user_config_name
-        )
-        res = user_config_object.save_func_runner.get_res()
-        return make_response(
-            {
-                "success": True,
-                "messages": list(map(escape, res.get_messages())),
-                "state": res.get_status(),
-                "has_warning": user_config_object.save_func_runner.has_warning(),
-                "running": user_config_object.save_func_runner.is_running(),
-                "combined_output": user_config_object.save_func_runner.get_combined_output(
-                    recent_only=True
-                ),
-            },
-            200,
-        )
 
 
 @main.route("/api/get_main_output")

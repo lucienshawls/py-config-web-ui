@@ -56,7 +56,7 @@ class ResultStatus:
             self.add_message(message)
         else:
             raise TypeError(
-                f"message must be a string or a list of strings, not {type(message)}"
+                f"message must be a string or a list of strings, not {type(message)}."
             )
 
     def copy(self) -> "ResultStatus":
@@ -156,7 +156,7 @@ class ProgramRunner:
     ) -> None:
         if not callable(function):
             raise TypeError(
-                f"function must be a callable function, not {type(function)}"
+                f"function must be a callable function, not {type(function)}."
             )
         self.function = function
 
@@ -277,7 +277,7 @@ class ProgramRunner:
 
     def run(self, *args, **kwargs) -> None:
         if hasattr(self, "program_thread") and self.program_thread.is_alive():
-            return ResultStatus(False, "Program is already running")
+            return ResultStatus(False, "Program is already running.")
         self.output = ""
         self.recently_added_output = ""
 
@@ -348,6 +348,7 @@ class ProgramRunner:
 
 
 class UserConfig:
+    DEFAULT_PROFILE_NAME = "Default"
     DEFAULT_VALUE = {
         "string": "",
         "number": 0,
@@ -357,12 +358,12 @@ class UserConfig:
     }
 
     @staticmethod
-    def default_extra_validation_func(name: str, config: dict | list) -> ResultStatus:
+    def default_extra_validation_func(name: str, config: dict) -> ResultStatus:
         return ResultStatus(True)
 
     @staticmethod
-    def default_save_func(name: str, config: dict | list) -> ResultStatus:
-        return ResultStatus(False, "Save function is undefined")
+    def default_save_func(name: str, config: dict) -> ResultStatus:
+        return ResultStatus(False, "Save function is undefined.")
 
     @staticmethod
     def add_order(schema: dict, property_order: int = 0) -> dict:
@@ -421,15 +422,15 @@ class UserConfig:
 
     def check(
         self,
-        config: dict | list,
+        config: dict,
         skip_schema_validations: bool = False,
         skip_extra_validations: bool = False,
     ) -> ResultStatus:
         result = ResultStatus(True)
-        if not (isinstance(config, list) or isinstance(config, dict)):
+        if not isinstance(config, dict):
             result.set_status(False)
             result.add_message(
-                f"TypeError: config must be a dictionary or a list, not {type(config)}"
+                f"TypeError: config must be a dictionary, not {type(config)}."
             )
             return result
         if not skip_schema_validations:
@@ -447,37 +448,144 @@ class UserConfig:
                 else:
                     if not bool(extra_validation_result):
                         result.set_status(False)
-                        result.add_message("Extra validation failed")
+                        result.add_message("Extra validation failed.")
                         return result
             except Exception as e:
                 result.set_status(False)
+                result.add_message("Extra validation failed.")
                 result.add_message(
                     "".join(traceback.format_exception_only(type(e), e)).strip()
                 )
                 return result
         return result
 
-    def set_config(
+    def has_profile(self, name: str) -> bool:
+        return name in self.config
+
+    def add_profile(
         self,
-        config: dict | list = None,
+        name: str,
+        config: dict = None,
+        save_file: bool = False,
+    ) -> ResultStatus:
+        if not isinstance(name, str):
+            return ResultStatus(
+                False, f"Profile name must be a string, not {type(name)}."
+            )
+        if name == "":
+            return ResultStatus(False, "Profile name cannot be empty.")
+        if self.has_profile(name=name):
+            return ResultStatus(False, f"Profile {name} already exists.")
+        return self.update_profile(
+            name=name,
+            config=config,
+            skip_schema_validations=True,
+            skip_extra_validations=True,
+            save_file=save_file,
+        )
+
+    def delete_profile(self, name: str, save_file: bool = False) -> ResultStatus:
+        if not self.has_profile(name=name):
+            return ResultStatus(True, f"Delete incomplete: profile {name} not found.")
+        del self.config[name]
+        if save_file:
+            res_delete = self.save(profile_name=name, config=None)
+            if not res_delete:
+                return res_delete
+        return ResultStatus(True)
+
+    def update_profile(
+        self,
+        name: str = None,
+        config: dict = None,
         skip_schema_validations: bool = False,
         skip_extra_validations: bool = False,
+        save_file: bool = False,
     ) -> ResultStatus:
+        if name is None:
+            name = UserConfig.DEFAULT_PROFILE_NAME
+        if name == "":
+            return ResultStatus(False, "Profile name cannot be empty.")
         if config is None:
             config = UserConfig.generate_default_json(self.schema)
-        result = self.check(
+        res_check = self.check(
             config=config,
             skip_schema_validations=skip_schema_validations,
             skip_extra_validations=skip_extra_validations,
         )
-        if result.get_status():
-            self.config = config
-            return ResultStatus(True)
-        else:
-            return result
+        if not res_check.get_status():
+            return res_check
+        if save_file:
+            res_save = self.save(profile_name=name, config=config)
+            if not res_save.get_status():
+                return res_save
+        self.config[name] = config
+        return ResultStatus(True)
 
-    def save(self) -> ResultStatus:
-        return self.save_func_runner.run(self.name, self.config)
+    def rename_profile(
+        self,
+        old_name: str,
+        new_name: str,
+        save_file: bool = False,
+    ) -> ResultStatus:
+        if not isinstance(old_name, str):
+            return ResultStatus(
+                False, f"Old profile name must be a string, not {type(old_name)}."
+            )
+        if not isinstance(new_name, str):
+            return ResultStatus(
+                False, f"New profile name must be a string, not {type(new_name)}."
+            )
+        if not self.has_profile(name=old_name):
+            return ResultStatus(False, f"Profile {old_name} not found.")
+        if self.has_profile(name=new_name):
+            return ResultStatus(False, f"Profile {new_name} already exists.")
+        res_new = self.update_profile(
+            name=new_name,
+            config=self.get_config(profile_name=old_name),
+            skip_schema_validations=True,
+            skip_extra_validations=True,
+            save_file=save_file,
+        )
+        if not res_new:
+            return res_new
+        res_old = self.delete_profile(name=old_name, save_file=save_file)
+        if not res_old.get_status():
+            result = ResultStatus(
+                True,
+                f"Renaming incomplete, profile {old_name} may still be in the file.",
+            )
+            for message in res_old.get_messages():
+                result.add_message(message)
+            return result
+        return ResultStatus(True)
+
+    def save(self, profile_name, config: dict | None) -> ResultStatus:
+        if hasattr(self, "saving") and self.saving:
+            message = "Last save process has not finished yet, please try again later."
+            return ResultStatus(False, message)
+        else:
+            self.saving = True
+
+        try:
+            res = self.save_func(self.name, profile_name, config)
+        except Exception as e:
+            res = ResultStatus(False, str(e))
+        self.saving = False
+        if isinstance(res, ResultStatus):
+            if not res.get_status() and len(res.get_messages()) == 0:
+                return ResultStatus(False, "An error occurred during file processing.")
+            return res
+        elif isinstance(res, bool):
+            if res:
+                return ResultStatus(True)
+            else:
+                return ResultStatus(False, "An error occurred during file processing.")
+        else:
+            return ResultStatus(True)
+
+    def get_profile_names(self) -> list[str]:
+        return list(self.config.keys())
 
     def get_name(self) -> str:
         return self.name
@@ -488,14 +596,14 @@ class UserConfig:
     def get_schema(self) -> dict:
         return self.schema
 
-    def get_config(self) -> dict | list:
-        return self.config
+    def get_config(self, profile_name: str) -> dict | None:
+        return self.config.get(profile_name, None)
 
     def set_schema(self, schema: dict) -> None:
         if schema is None:
             schema = {}
         if not isinstance(schema, dict):
-            raise TypeError(f"schema must be a dictionary, not {type(schema)}")
+            raise TypeError(f"schema must be a dictionary, not {type(schema)}.")
         self.schema = UserConfig.add_order(schema)
 
     def __init__(
@@ -508,13 +616,17 @@ class UserConfig:
     ) -> None:
         if not isinstance(name, str):
             raise TypeError(
-                f"friendly_name must be a string, not {type(friendly_name)}"
+                f"friendly_name must be a string, not {type(friendly_name)}."
             )
+        if name == "":
+            raise ValueError("Config name cannot be empty.")
         self.name = name
         if not isinstance(friendly_name, str):
             raise TypeError(
-                f"friendly_name must be a string, not {type(friendly_name)}"
+                f"friendly_name must be a string, not {type(friendly_name)}."
             )
+        if friendly_name == "":
+            raise ValueError("Config friendly name cannot be empty.")
         self.friendly_name = friendly_name
 
         if extra_validation_func is None:
@@ -522,25 +634,17 @@ class UserConfig:
         else:
             if not callable(extra_validation_func):
                 raise TypeError(
-                    f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
+                    f"extra_validation_func must be a callable function, not {type(extra_validation_func)}."
                 )
             self.extra_validation_func = extra_validation_func
         if save_func is None:
-            self.save_func_runner = ProgramRunner(
-                function=UserConfig.default_save_func,
-                hide_terminal_output=True,
-                hide_terminal_error=False,
-            )
+            self.save_func = UserConfig.default_save_func
         else:
             if not callable(save_func):
                 raise TypeError(
-                    f"extra_validation_func must be a callable function, not {type(extra_validation_func)}"
+                    f"save_func must be a callable function, not {type(extra_validation_func)}"
                 )
-            self.save_func_runner = ProgramRunner(
-                function=save_func,
-                hide_terminal_output=True,
-                hide_terminal_error=False,
-            )
+            self.save_func = save_func
         self.set_schema(schema=schema)
         self.config = {}
 
@@ -548,16 +652,20 @@ class UserConfig:
 class ConfigEditor:
     @staticmethod
     def default_main_entry() -> None:
-        return ResultStatus(False, "Main entry is undefined")
+        return ResultStatus(False, "Main entry is undefined.")
 
     def __init__(
-        self, app_name: str = "Config Editor", main_entry: Callable = None
+        self,
+        app_name: str = "Config Editor",
+        main_entry: Callable = None,
     ) -> None:
         from . import app
         from .config import AppConfig
 
         if not isinstance(app_name, str):
-            raise TypeError(f"app_name must be a string, not {type(app_name)}")
+            raise TypeError(f"app_name must be a string, not {type(app_name)}.")
+        if app_name == "":
+            raise ValueError("app_name cannot be empty.")
         if main_entry is None:
             self.main_entry_runner = ProgramRunner(
                 function=ConfigEditor.default_main_entry,
@@ -567,7 +675,7 @@ class ConfigEditor:
         else:
             if not callable(main_entry):
                 raise TypeError(
-                    f"main_entry must be a callable function, not {type(main_entry)}"
+                    f"main_entry must be a callable function, not {type(main_entry)}."
                 )
             self.main_entry_runner = ProgramRunner(
                 function=main_entry,
@@ -596,7 +704,7 @@ class ConfigEditor:
         if user_config_name in self.config_store:
             del self.config_store[user_config_name]
         else:
-            raise KeyError(f"Config {user_config_name} not found")
+            raise KeyError(f"Config {user_config_name} not found.")
 
     def add_user_config(
         self,
@@ -605,11 +713,11 @@ class ConfigEditor:
     ) -> None:
         if not isinstance(user_config, UserConfig):
             raise TypeError(
-                f"user_config must be a UserConfig object, not {type(user_config)}"
+                f"user_config must be a UserConfig object, not {type(user_config)}."
             )
         user_config_name = user_config.get_name()
         if user_config_name in self.config_store and not replace:
-            raise KeyError(f"Config {user_config_name} already exists")
+            raise KeyError(f"Config {user_config_name} already exists.")
         self.config_store[user_config_name] = user_config
 
     def get_user_config_names(self) -> list[str]:
@@ -619,7 +727,7 @@ class ConfigEditor:
         if user_config_name in self.config_store:
             return self.config_store[user_config_name]
         else:
-            raise KeyError(f"Config {user_config_name} not found")
+            raise KeyError(f"Config {user_config_name} not found.")
 
     def launch_main_entry(self) -> ResultStatus:
         return self.main_entry_runner.run()
@@ -642,12 +750,12 @@ class ConfigEditor:
         sys.stderr = BASE_ERROR_STREAM
         print(f'\rRestored stdout and stderr.{" "*5}')
         print("Please wait for the remaining threads to stop...")
-        for user_config_name in self.get_user_config_names():
-            self.get_user_config(user_config_name).save_func_runner.wait_for_join()
         self.main_entry_runner.wait_for_join()
         print("All remaining threads stopped.")
 
     def run(self, host="localhost", port=80) -> None:
+        if len(self.get_user_config_names()) == 0:
+            raise ValueError("No UserConfig object found. Please add at least one.")
         url = (
             f"http://"
             f'{host if host!="0.0.0.0" and host!="[::]" else "localhost"}'

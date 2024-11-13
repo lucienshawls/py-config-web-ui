@@ -2,24 +2,40 @@
 let editor;
 let editor_is_ready = false;
 const statusIconDisappearDelay = 400;
+const pageRefreshDelay = 400;
+
 const pathName = window.location.pathname;
-const configRoot = pathName.split('/').pop();
+const pathNameParts = pathName.split('/').filter(part => part !== '');
+const profile = pathNameParts[pathNameParts.length - 1];
+const configRoot = pathNameParts[pathNameParts.length - 2];
+
 const navbarCollapseElement = document.querySelector("#navbarNav");
+
+
+const configSelectElement = document.getElementById('configSelect');
+const profileSelectElement = document.getElementById('profileSelect');
+
+const profileContainer = document.querySelector('#profile-container')
+const profileManageElement = document.querySelector('#profile-manage')
+
+const profileNameEditText = document.querySelector("#profile-name-edit")
+const profileEditGroup = document.querySelector('#profile-edit-group')
+const profileConfirmGroup = document.querySelector('#profile-confirm-group')
+
+const profileAddButton = document.querySelector('#profile-add')
+const profileRenameButton = document.querySelector('#profile-rename')
+const profileDeleteButton = document.querySelector('#profile-delete')
+const profileConfirmButton = document.querySelector('#profile-confirm')
+const profileCancelButton = document.querySelector('#profile-cancel')
 
 const editorLoadingIconElement = document.querySelector('#editor-loading-icon');
 const editorLoadingIconElementBaseClassName = editorLoadingIconElement.className;
-
-const savingScriptRunningIconElement = document.querySelector('#saving-script-running-icon');
-const savingScriptRunningIconElementBaseClassName = savingScriptRunningIconElement.className;
 
 const mainProgramRunningIconElement = document.querySelector('#main-program-running-icon');
 const mainProgramRunningIconElementBaseClassName = mainProgramRunningIconElement.className;
 
 const jsonPreviewTextElement = document.querySelector('#json-preview-text');
 const jsonPreviewTextElementBaseClassName = jsonPreviewTextElement.className;
-
-const saveOutputTextElement = document.querySelector('#save-output-text');
-const saveOutputTextElementBaseClassName = saveOutputTextElement.className;
 
 const mainOutputTextElement = document.querySelector('#main-output-text');
 const mainOutputTextElementBaseClassName = mainOutputTextElement.className;
@@ -147,8 +163,16 @@ function changeStyle() {
 }
 
 function navigateToConfig() {
-    const selectElement = document.getElementById('configSelect');
-    const selectedValue = selectElement.value;
+    const selectedValue = configSelectElement.value;
+    if (selectedValue) {
+        window.location.href = selectedValue;
+    } else {
+        window.location.href = '/';
+    }
+}
+
+function navigateToProfile() {
+    const selectedValue = profileSelectElement.value;
     if (selectedValue) {
         window.location.href = selectedValue;
     } else {
@@ -165,7 +189,6 @@ function collapseNavbar() {
 
 async function getConfigAndSchema() {
     let res = {};
-    const pathName = window.location.pathname;
     try {
         const response = await fetch('/api' + pathName, { method: 'GET' });
         const data = await response.json();
@@ -186,30 +209,46 @@ async function getConfigAndSchema() {
     return res;
 }
 
-async function saveConfig() {
+async function updateProfile(action, profileName) {
     clearFlashMessage();
-    const errors = editor.validate();
+    let method;
+    let requestData = {};
+    requestData.name = decodeURIComponent(profileName);
+    if (action === 'update') {
+        const errors = editor.validate();
 
-    if (errors.length) {
-        errors.forEach(error => {
-            // root.a.b.c => root[a][b][c]
-            const parts = error.path.split('.');
-            const href = parts.map((part, index) => {
-                return index >= 1 ? `[${part}]` : part;
-            }).join('');
+        if (errors.length) {
+            errors.forEach(error => {
+                // root.a.b.c => root[a][b][c]
+                const parts = error.path.split('.');
+                const href = parts.map((part, index) => {
+                    return index >= 1 ? `[${part}]` : part;
+                }).join('');
 
-            flashMessage(`Property "<b>${error.property}</b>" unsatisfied at {<a href="#${href}" class="alert-link">${error.path}</a>}: ${error.message}`, 'danger');
-        });
+                flashMessage(`Property "<b>${error.property}</b>" unsatisfied at {<a href="#${href}" class="alert-link">${error.path}</a>}: ${error.message}`, 'danger');
+            });
+            return;
+        }
+        method = 'PATCH';
+        const configValue = editor.getValue();
+        requestData.config = configValue;
+    } else if (action === 'add') {
+        method = 'POST';
+    } else if (action === 'rename') {
+        method = 'PUT';
+    } else if (action === 'delete') {
+        method = 'DELETE';
+    } else {
         return;
     }
-    const configValue = JSON.stringify(editor.getValue());
+
     try {
         const response = await fetch(`/api${pathName}`, {
-            method: 'PATCH',
+            method: method,
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: configValue
+            body: JSON.stringify(requestData)
         });
         const data = await response.json();
         let messageCategory;
@@ -223,7 +262,7 @@ async function saveConfig() {
         }
         return data.success;
     } catch (error) {
-        flashMessage('Failed to save config. Checkout your python backend.', 'danger');
+        flashMessage('Failed to update profile. Is the backend service working properly?', 'danger');
         return false;
     }
 }
@@ -310,6 +349,63 @@ async function initialize_editor() {
 
 initialize_editor();
 
+let currentProfileEditAction = ''
+async function manage_profiles(action) {
+    if (action === 'confirm') {
+        let res;
+        if (currentProfileEditAction === 'add') {
+            res = await updateProfile('add', profileNameEditText.value);
+            if (res) {
+                setTimeout(() => {
+                    window.location.href = `/config/${configRoot}/${profileNameEditText.value}`;
+                }, pageRefreshDelay);
+            }
+        } else if (currentProfileEditAction === 'rename') {
+            res = await updateProfile('rename', profileNameEditText.value);
+            if (res) {
+                setTimeout(() => {
+                    window.location.href = `/config/${configRoot}/${profileNameEditText.value}`;
+                }, pageRefreshDelay);
+            }
+        } else if (currentProfileEditAction === 'delete') {
+            res = await updateProfile('delete', profile);
+            if (res) {
+                setTimeout(() => {
+                    window.location.href = `/config/${configRoot}`;
+                }, pageRefreshDelay);
+            }
+        }
+        manage_profiles('cancel');
+
+    } else if (action === 'cancel') {
+        currentProfileEditAction = '';
+        editor.enable();
+        profileNameEditText.style.display = 'none';
+        profileConfirmGroup.style.display = 'none';//隐藏确认按钮组
+        profileEditGroup.style.removeProperty('display');//显示编辑按钮组
+    } else {
+        currentProfileEditAction = action;
+        editor.disable();
+        if (action !== 'delete') {
+            profileNameEditText.style.removeProperty('display'); //显示文本框
+            profileConfirmButton.className = 'btn btn-primary'
+            profileCancelButton.className = 'btn btn-danger'
+            if (action === 'add') {
+                profileNameEditText.value = '';
+            } else if (action === 'rename') {
+                profileNameEditText.value = decodeURIComponent(profile);
+            }
+        } else {
+            profileNameEditText.style.display = 'none';
+            profileConfirmButton.className = 'btn btn-danger'
+            profileCancelButton.className = 'btn btn-primary'
+        }
+        profileConfirmGroup.style.removeProperty('display');//显示确认按钮组
+        profileEditGroup.style.display = 'none';//隐藏编辑按钮组
+        profileConfirmButton.textContent = 'Confirm ' + action.charAt(0).toUpperCase() + action.slice(1);
+    }
+}
+
 function get_output(func_type) {
     let complete = true;
     let outputTextElement;
@@ -325,13 +421,6 @@ function get_output(func_type) {
         runningIconElementBaseClassName = mainProgramRunningIconElementBaseClassName;
         url = `/api/get_main_output`;
         err_message = 'Failed to get output from the main program.';
-    } else if (func_type === 'save') {
-        outputTextElement = saveOutputTextElement;
-        outputTextElementBaseClassName = saveOutputTextElementBaseClassName;
-        runningIconElement = savingScriptRunningIconElement;
-        runningIconElementBaseClassName = savingScriptRunningIconElementBaseClassName;
-        url = `/api${pathName}/get_save_output`;
-        err_message = 'Failed to get output from the data-saving script.';
     } else {
         return;
     }
@@ -399,9 +488,7 @@ const saveActionButtons = document.querySelectorAll('.save-action');
 saveActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
         collapseNavbar();
-        if (await saveConfig()) {
-            get_output('save');
-        }
+        await updateProfile('update', profile);
     });
 });
 
@@ -429,4 +516,25 @@ terminateActionButtons.forEach(button => {
         collapseNavbar();
         await terminate();
     });
+});
+
+profileAddButton.addEventListener('click', async () => {
+    await manage_profiles('add')
+});
+profileRenameButton.addEventListener('click', async () => {
+    await manage_profiles('rename')
+});
+profileDeleteButton.addEventListener('click', async () => {
+    await manage_profiles('delete')
+});
+profileConfirmButton.addEventListener('click', async () => {
+    await manage_profiles('confirm')
+});
+profileCancelButton.addEventListener('click', async () => {
+    await manage_profiles('cancel')
+});
+document.addEventListener("click", async (event) => {
+    if (!profileContainer.contains(event.target)) {
+        await manage_profiles('cancel')
+    }
 });
