@@ -14,60 +14,15 @@ html * {
 
 h2>.spinner-border {
     --bs-spinner-border-width: 0.2em;
-    display: none;
-}
-
-#profile-container .btn-group {
-    white-space: nowrap;
-}
-
-#editor-container .editor-check {
-    padding-left: 0;
-}
-
-#editor-container .editor-check-input {
-    position: relative;
-}
-
-#editor-container .check-input-plain {
-    top: .3rem;
-}
-
-#editor-container .check-input-heading {
-    top: .4rem;
-}
-
-#editor-container .je-switcher {
-    padding: .25rem 2.25rem .25rem .75rem !important;
-    font-style: normal;
-    margin-bottom: .25rem !important;
-}
-
-#editor-container .je-object__controls {
-    top: -.15rem;
-}
-
-#editor-container .card-title {
-    margin-bottom: 0rem;
-}
-
-#editor-container .level-1 {
-    margin-bottom: 0.2rem;
-}
-
-#editor-container .user-add-item {
-    display: inline-block;
-    font-weight: bolder;
-    margin-right: .75rem;
 }
 
 /* small */
 @media (max-width: 992px) {
-    #action-dropdown-group {
+    #navbar-menu-actions {
         width: 100%;
     }
 
-    #action-dropdown-group .dropdown-menu {
+    #navbar-menu-actions .dropdown-menu {
         position: absolute;
         left: 0;
         top: 100%;
@@ -78,42 +33,110 @@ h2>.spinner-border {
 
 /* large */
 @media (min-width: 992px) {
-    #action-dropdown-group {
+    #navbar-menu-actions {
         width: auto;
     }
 
-    #form-action-group>div {
+    .form-actions>div {
         padding-left: 0;
     }
 }
 
+#navbar-menu-actions button {
+    white-space: nowrap;
+}
+
+#navbar-menu-actions button i {
+    width: 1rem;
+    text-align: center;
+    margin-right: 0.5rem;
+}
+
+.dropdown-item:hover,
+.dropdown-item:hover i {
+    color: var(--bs-white) !important;
+}
+
 .menu-primary:hover {
     background-color: var(--bs-primary);
-    color: var(--bs-white);
+    /* color: var(--bs-white); */
 }
 
 .menu-success:hover {
     background-color: var(--bs-success);
-    color: var(--bs-white);
+    /* color: var(--bs-white); */
 }
 
 .menu-danger:hover {
     background-color: var(--bs-danger);
-    color: var(--bs-white);
+    /* color: var(--bs-white); */
 }
 
 .btn-close {
     transform: scale(0.75);
 }
 
+#profile-container .btn-group {
+    white-space: nowrap;
+}
+
+#config-form-edit .editor-check {
+    padding-left: 0;
+}
+
+#config-form-edit .editor-check-input {
+    position: relative;
+}
+
+#config-form-edit .check-input-plain {
+    top: .3rem;
+}
+
+#config-form-edit .check-input-heading {
+    top: .4rem;
+}
+
+#config-form-edit .je-switcher {
+    padding: .25rem 2.25rem .25rem .75rem !important;
+    font-style: normal;
+    margin-bottom: .25rem !important;
+}
+
+#config-form-edit .je-object__controls {
+    top: -.15rem;
+}
+
+#config-form-edit .card-title {
+    margin-bottom: 0rem;
+}
+
+#config-form-edit .level-1 {
+    margin-bottom: 0.2rem;
+}
+
+#config-form-edit .user-add-item {
+    display: inline-block;
+    font-weight: bolder;
+    margin-right: .75rem;
+}
+
 .code-text {
     font-family: monospace;
 }
 
-#json-preview-text {
+#json-code-edit {
     min-height: 40rem;
 }
 
-#main-output-text {
+#json-code-content-placeholder button {
+    height: 40rem;
+    color: var(--bs-secondary);
+}
+
+#json-code-content-placeholder span {
+    font-weight: bold;
+}
+
+#terminal-output-display {
     min-height: 30rem;
 }

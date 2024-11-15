@@ -1,49 +1,91 @@
 'use strict';
+
 let editor;
 let editor_is_ready = false;
-const statusIconDisappearDelay = 400;
+let currentProfileEditAction = '';
+
 const pageRefreshDelay = 400;
+const statusIconDisappearDelay = 400;
 
 const pathName = window.location.pathname;
 const pathNameParts = pathName.split('/').filter(part => part !== '');
-const profile = pathNameParts[pathNameParts.length - 1];
-const configRoot = pathNameParts[pathNameParts.length - 2];
+const profileName = pathNameParts[pathNameParts.length - 1];
+const configName = pathNameParts[pathNameParts.length - 2];
 
-const navbarCollapseElement = document.querySelector("#navbarNav");
+const navbarMenu = document.querySelector("#navbar-menu");
+const configSelect = document.querySelector('#config-select');
 
+const saveActionButtons = document.querySelectorAll('.save-action');
+const resetActionButtons = document.querySelectorAll('.reset-action');
+const launchActionButtons = document.querySelectorAll('.launch-action');
+const terminateActionButtons = document.querySelectorAll('.terminate-action');
 
-const configSelectElement = document.getElementById('configSelect');
-const profileSelectElement = document.getElementById('profileSelect');
+const flashMessagesContent = document.querySelector('#flash-messages-content');
 
-const profileContainer = document.querySelector('#profile-container')
-const profileManageElement = document.querySelector('#profile-manage')
+const profileContainer = document.querySelector('#profile-container');
 
-const profileNameEditText = document.querySelector("#profile-name-edit")
-const profileEditGroup = document.querySelector('#profile-edit-group')
-const profileConfirmGroup = document.querySelector('#profile-confirm-group')
+const profileNameEditTexts = document.querySelectorAll(".profile-name-edit")
 
-const profileAddButton = document.querySelector('#profile-add')
-const profileRenameButton = document.querySelector('#profile-rename')
-const profileDeleteButton = document.querySelector('#profile-delete')
-const profileConfirmButton = document.querySelector('#profile-confirm')
-const profileCancelButton = document.querySelector('#profile-cancel')
+const profileConfirmGroups = document.querySelectorAll('.profile-confirm-group');
+const profileConfirmButtons = document.querySelectorAll('.profile-confirm');
+const profileCancelButtons = document.querySelectorAll('.profile-cancel');
 
-const editorLoadingIconElement = document.querySelector('#editor-loading-icon');
-const editorLoadingIconElementBaseClassName = editorLoadingIconElement.className;
+const profileActionsGroups = document.querySelectorAll('.profile-actions-group');
+const profileAddButtons = document.querySelectorAll('.profile-add');
+const profileRenameButtons = document.querySelectorAll('.profile-rename');
+const profileDeleteButtons = document.querySelectorAll('.profile-delete');
 
-const mainProgramRunningIconElement = document.querySelector('#main-program-running-icon');
-const mainProgramRunningIconElementBaseClassName = mainProgramRunningIconElement.className;
+const profileSelect = document.querySelector('#profile-select');
 
-const jsonPreviewTextElement = document.querySelector('#json-preview-text');
-const jsonPreviewTextElementBaseClassName = jsonPreviewTextElement.className;
+const configFormLoadingIcon = document.querySelector('#config-form-loading-icon');
+const configFormLoadingIconBaseClassName = configFormLoadingIcon.className;
+const configFormContent = document.querySelector('#config-form-content');
+const configFormEdit = document.querySelector('#config-form-edit');
+const configFormContentPlaceholder = document.querySelector('#config-form-content-placeholder');
 
-const mainOutputTextElement = document.querySelector('#main-output-text');
-const mainOutputTextElementBaseClassName = mainOutputTextElement.className;
+const jsonCodeExpandButton = document.querySelector('#json-code-expand');
+const jsonCodeCollapseButton = document.querySelector('#json-code-collapse');
+const jsonCodeContent = document.querySelector('#json-code-content');
+const jsonCodeEdit = document.querySelector('#json-code-edit');
+const jsonCodeContentPlaceholder = document.querySelector('#json-code-content-placeholder');
+
+const mainProgramRunningIcon = document.querySelector('#main-program-running-icon');
+const mainProgramRunningIconBaseClassName = mainProgramRunningIcon.className;
+const terminalOutputDisplay = document.querySelector('#terminal-output-display');
+const terminalOutputDisplayBaseClassName = terminalOutputDisplay.className;
+
+const bsCollapseNavbarMenu = new bootstrap.Collapse(navbarMenu, { toggle: false });
+const bsCollapseConfigFormContent = new bootstrap.Collapse(configFormContent, { toggle: false });
+const bsCollapseConfigFormContentPlaceHolder = new bootstrap.Collapse(configFormContentPlaceholder, { toggle: false });
+const bsCollapsejsonCodeContent = new bootstrap.Collapse(jsonCodeContent, { toggle: false });
+const bsCollapsejsonCodeContentPlaceholder = new bootstrap.Collapse(jsonCodeContentPlaceholder, { toggle: false });
+
+function focusElementFromHash() {
+    const hash = window.location.hash;
+    if (hash) {
+        const target = document.querySelector(hash);
+        if (target) {
+            target.focus();
+        }
+    }
+}
+
+function collapseNavbar() {
+    bsCollapseNavbarMenu.hide();
+}
+
+function navigateToConfig() {
+    const selectedValue = configSelect.value;
+    if (selectedValue) {
+        window.location.href = selectedValue;
+    } else {
+        window.location.href = '/';
+    }
+}
 
 function flashMessage(message, category) {
-    const flashMessageElement = document.querySelector('#flash-messages');
     const messageHTML = `<div class="alert alert-${category} alert-dismissible fade show" role="alert"><div>${message}</div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
-    flashMessageElement.insertAdjacentHTML('beforeend', messageHTML);
+    flashMessagesContent.insertAdjacentHTML('beforeend', messageHTML);
     window.scroll({
         top: 0,
         behavior: 'smooth'
@@ -52,13 +94,92 @@ function flashMessage(message, category) {
 }
 
 function clearFlashMessage() {
-    const flashMessageElement = document.querySelector('#flash-messages');
-    flashMessageElement.innerHTML = '';
+    flashMessagesContent.innerHTML = '';
+}
+
+function navigateToProfile() {
+    const selectedValue = profileSelect.value;
+    if (selectedValue) {
+        window.location.href = selectedValue;
+    } else {
+        window.location.href = '/';
+    }
+}
+
+async function manageProfiles(action, button) {
+    let profileNameEditText;
+    if (action === 'confirm') {
+        if (button) {
+            const grandParent = button.parentElement.parentElement;
+            profileNameEditText = grandParent.querySelector("input.profile-name-edit");
+        } else {
+            return;
+        }
+        let res;
+        if (currentProfileEditAction === 'add') {
+            res = await updateProfile('add', profileNameEditText.value);
+            if (res) setTimeout(() => { window.location.href = `/config/${configName}/${profileNameEditText.value}`; }, pageRefreshDelay);
+        } else if (currentProfileEditAction === 'rename') {
+            res = await updateProfile('rename', profileNameEditText.value);
+            if (res) setTimeout(() => { window.location.href = `/config/${configName}/${profileNameEditText.value}`; }, pageRefreshDelay);
+        } else if (currentProfileEditAction === 'delete') {
+            res = await updateProfile('delete', profileName);
+            if (res) setTimeout(() => { window.location.href = `/config/${configName}`; }, pageRefreshDelay);
+        }
+        manageProfiles('cancel', null);
+    } else if (action === 'cancel') {
+        currentProfileEditAction = '';
+        editor.enable();
+        profileNameEditTexts.forEach(element => { element.style.display = 'none'; });
+        profileConfirmGroups.forEach(element => { element.style.display = 'none'; });
+        profileActionsGroups.forEach(element => { element.style.removeProperty('display'); });
+    } else {
+        currentProfileEditAction = action;
+        editor.disable();
+        if (action !== 'delete') {
+            profileNameEditTexts.forEach(element => { element.style.removeProperty('display'); });
+            profileCancelButtons.forEach(element => { element.className = 'btn btn-danger'; });
+            if (action === 'add') {
+                profileNameEditTexts.forEach(element => { element.value = ''; });
+                profileConfirmButtons.forEach(element => { element.className = 'btn btn-success'; });
+            } else if (action === 'rename') {
+                profileNameEditTexts.forEach(element => { element.value = decodeURIComponent(profileName); });
+                profileConfirmButtons.forEach(element => { element.className = 'btn btn-primary'; });
+            }
+        } else {
+            profileNameEditTexts.forEach(element => { element.style.display = 'none'; });
+            profileConfirmButtons.forEach(element => { element.className = 'btn btn-danger'; });
+            profileCancelButtons.forEach(element => { element.className = 'btn btn-primary'; });
+        }
+        profileConfirmGroups.forEach(element => { element.style.removeProperty('display'); });
+        profileActionsGroups.forEach(element => { element.style.display = 'none'; });
+        // profileConfirmButtons.forEach(element => { element.textContent = 'Confirm ' + action.charAt(0).toUpperCase() + action.slice(1); });
+    }
+}
+async function getConfigAndSchema() {
+    let res = {};
+    try {
+        const response = await fetch('/api' + pathName, { method: 'GET' });
+        const data = await response.json();
+        res.config = data.config;
+        res.schema = data.schema;
+        if (data.success) {
+            configFormLoadingIcon.className = configFormLoadingIconBaseClassName + ' text-success';
+        }
+        else {
+            configFormLoadingIcon.className = configFormLoadingIconBaseClassName + ' text-danger';
+            flashMessage('Failed to get config from server', 'danger');
+        }
+    }
+    catch (error) {
+        flashMessage('Failed to get config from server', 'danger');
+        configFormLoadingIcon.className = configFormLoadingIconBaseClassName + ' text-danger';
+    }
+    return res;
 }
 
 function changeCheckboxStyle() {
-    const container = document.querySelector('#editor-container');
-    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    const checkboxes = configFormEdit.querySelectorAll('input[type="checkbox"]');
 
     checkboxes.forEach(input => {
         if (input.parentElement.tagName.toLowerCase() === 'span' && input.parentElement.attributes.length === 0) {
@@ -150,8 +271,9 @@ function setAnchor() {
             const anchor = parts.map((part, index) => {
                 return index >= 1 ? `[${part}]` : part;
             }).join('');
-
-            element.id = anchor;
+            if (!document.getElementById(anchor)) {
+                element.id = anchor;
+            }
         }
     });
 }
@@ -162,51 +284,25 @@ function changeStyle() {
     setAnchor();
 }
 
-function navigateToConfig() {
-    const selectedValue = configSelectElement.value;
-    if (selectedValue) {
-        window.location.href = selectedValue;
+function showConfigFormContent() {
+    setTimeout(() => { bsCollapseConfigFormContent.show(); }, 0);
+    setTimeout(() => { bsCollapseConfigFormContentPlaceHolder.hide(); }, 0);
+}
+
+function toggleJsonCodeContent(action) {
+    if (action === 'show') {
+        setTimeout(() => { bsCollapsejsonCodeContent.show(); }, 0);
+        setTimeout(() => { bsCollapsejsonCodeContentPlaceholder.hide(); }, 0);
+        jsonCodeExpandButton.style.display = 'none';
+        jsonCodeCollapseButton.style.removeProperty('display');
+    } else if (action === 'hide') {
+        setTimeout(() => { bsCollapsejsonCodeContent.hide(); }, 0);
+        setTimeout(() => { bsCollapsejsonCodeContentPlaceholder.show(); }, 0);
+        jsonCodeExpandButton.style.removeProperty('display');
+        jsonCodeCollapseButton.style.display = 'none';
     } else {
-        window.location.href = '/';
+        return;
     }
-}
-
-function navigateToProfile() {
-    const selectedValue = profileSelectElement.value;
-    if (selectedValue) {
-        window.location.href = selectedValue;
-    } else {
-        window.location.href = '/';
-    }
-}
-
-function collapseNavbar() {
-    const bsCollapse = new bootstrap.Collapse(navbarCollapseElement, {
-        toggle: false
-    });
-    bsCollapse.hide();
-}
-
-async function getConfigAndSchema() {
-    let res = {};
-    try {
-        const response = await fetch('/api' + pathName, { method: 'GET' });
-        const data = await response.json();
-        res.config = data.config;
-        res.schema = data.schema;
-        if (data.success) {
-            editorLoadingIconElement.className = editorLoadingIconElementBaseClassName + ' text-success';
-        }
-        else {
-            editorLoadingIconElement.className = editorLoadingIconElementBaseClassName + ' text-danger';
-            flashMessage('Failed to get config from server', 'danger');
-        }
-    }
-    catch (error) {
-        flashMessage('Failed to get config from server', 'danger');
-        editorLoadingIconElement.className = editorLoadingIconElementBaseClassName + ' text-danger';
-    }
-    return res;
 }
 
 async function updateProfile(action, profileName) {
@@ -267,7 +363,6 @@ async function updateProfile(action, profileName) {
     }
 }
 
-
 async function reload() {
     clearFlashMessage();
     const configAndSchema = await getConfigAndSchema();
@@ -310,14 +405,14 @@ async function terminate() {
     }
 }
 
-async function initialize_editor() {
-    editorLoadingIconElement.className = editorLoadingIconElementBaseClassName + ' text-primary';
-    editorLoadingIconElement.style.display = 'inline-block';
+async function initializeConfigFormEditor() {
+    configFormLoadingIcon.className = configFormLoadingIconBaseClassName + ' text-primary';
+    configFormLoadingIcon.style.display = 'inline-block';
     const configAndSchema = await getConfigAndSchema();
     const myschema = configAndSchema.schema;
     const myconfig = configAndSchema.config;
     const jsonEditorConfig = {
-        form_name_root: configRoot,
+        form_name_root: configName,
         iconlib: 'fontawesome5',
         theme: 'bootstrap5',
         show_opt_in: true,
@@ -330,105 +425,32 @@ async function initialize_editor() {
         startval: myconfig,
         schema: myschema
     };
-    editor = new JSONEditor(document.querySelector('#editor-container'), jsonEditorConfig);
+    editor = new JSONEditor(configFormEdit, jsonEditorConfig);
     editor.on('change', function () {
         if (editor_is_ready) {
             setTimeout(() => changeStyle(), 0);
-            jsonPreviewTextElement.value = JSON.stringify(editor.getValue(), null, 4);
+            jsonCodeEdit.value = JSON.stringify(editor.getValue(), null, 4);
         }
     });
     editor.on('ready', function () {
         editor_is_ready = true;
-        setTimeout(() => changeStyle(), 0);
-        setTimeout(() => {
-            editorLoadingIconElement.style.display = 'none';
-        }, statusIconDisappearDelay)
-        jsonPreviewTextElement.wrap = "off";
+        setTimeout(() => { changeStyle(); }, 0);
+        showConfigFormContent();
+        toggleJsonCodeContent('show');
+        setTimeout(() => { configFormLoadingIcon.style.display = 'none'; }, statusIconDisappearDelay)
+        jsonCodeEdit.wrap = "off";
     });
 }
 
-initialize_editor();
-
-let currentProfileEditAction = ''
-async function manage_profiles(action) {
-    if (action === 'confirm') {
-        let res;
-        if (currentProfileEditAction === 'add') {
-            res = await updateProfile('add', profileNameEditText.value);
-            if (res) {
-                setTimeout(() => {
-                    window.location.href = `/config/${configRoot}/${profileNameEditText.value}`;
-                }, pageRefreshDelay);
-            }
-        } else if (currentProfileEditAction === 'rename') {
-            res = await updateProfile('rename', profileNameEditText.value);
-            if (res) {
-                setTimeout(() => {
-                    window.location.href = `/config/${configRoot}/${profileNameEditText.value}`;
-                }, pageRefreshDelay);
-            }
-        } else if (currentProfileEditAction === 'delete') {
-            res = await updateProfile('delete', profile);
-            if (res) {
-                setTimeout(() => {
-                    window.location.href = `/config/${configRoot}`;
-                }, pageRefreshDelay);
-            }
-        }
-        manage_profiles('cancel');
-
-    } else if (action === 'cancel') {
-        currentProfileEditAction = '';
-        editor.enable();
-        profileNameEditText.style.display = 'none';
-        profileConfirmGroup.style.display = 'none';//隐藏确认按钮组
-        profileEditGroup.style.removeProperty('display');//显示编辑按钮组
-    } else {
-        currentProfileEditAction = action;
-        editor.disable();
-        if (action !== 'delete') {
-            profileNameEditText.style.removeProperty('display'); //显示文本框
-            profileConfirmButton.className = 'btn btn-primary'
-            profileCancelButton.className = 'btn btn-danger'
-            if (action === 'add') {
-                profileNameEditText.value = '';
-            } else if (action === 'rename') {
-                profileNameEditText.value = decodeURIComponent(profile);
-            }
-        } else {
-            profileNameEditText.style.display = 'none';
-            profileConfirmButton.className = 'btn btn-danger'
-            profileCancelButton.className = 'btn btn-primary'
-        }
-        profileConfirmGroup.style.removeProperty('display');//显示确认按钮组
-        profileEditGroup.style.display = 'none';//隐藏编辑按钮组
-        profileConfirmButton.textContent = 'Confirm ' + action.charAt(0).toUpperCase() + action.slice(1);
-    }
-}
-
-function get_output(func_type) {
+function getTerminalOutput() {
     let complete = true;
-    let outputTextElement;
-    let outputTextElementBaseClassName;
-    let runningIconElement;
-    let runningIconElementBaseClassName;
-    let url;
-    let err_message;
-    if (func_type === 'main') {
-        outputTextElement = mainOutputTextElement;
-        outputTextElementBaseClassName = mainOutputTextElementBaseClassName;
-        runningIconElement = mainProgramRunningIconElement;
-        runningIconElementBaseClassName = mainProgramRunningIconElementBaseClassName;
-        url = `/api/get_main_output`;
-        err_message = 'Failed to get output from the main program.';
-    } else {
-        return;
-    }
-    runningIconElement.className = runningIconElementBaseClassName + ' text-primary';
-    runningIconElement.style.display = 'inline-block';
-    outputTextElement.value = '';
-    outputTextElement.className = outputTextElementBaseClassName;
-    outputTextElement.scrollTop = outputTextElement.scrollHeight;
+    const url = "/api/get_main_output";
+    const err_message = 'Failed to get output from the main program.';
+    mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-primary';
+    mainProgramRunningIcon.style.display = 'inline-block';
+    terminalOutputDisplay.value = '';
+    terminalOutputDisplay.className = terminalOutputDisplayBaseClassName;
+    terminalOutputDisplay.scrollTop = terminalOutputDisplay.scrollHeight;
     const intervalId = setInterval(async () => {
         if (!complete) {
             return;
@@ -441,42 +463,42 @@ function get_output(func_type) {
             const data = await response.json();
 
             let scroll = false;
-            if (outputTextElement.scrollTop + outputTextElement.clientHeight >= outputTextElement.scrollHeight - 10) {
+            if (terminalOutputDisplay.scrollTop + terminalOutputDisplay.clientHeight >= terminalOutputDisplay.scrollHeight - 10) {
                 scroll = true;
             }
-            outputTextElement.wrap = "off";
-            outputTextElement.value += data.combined_output;
+            terminalOutputDisplay.wrap = "off";
+            terminalOutputDisplay.value += data.combined_output;
             if (data.has_warning) {
-                runningIconElement.className = runningIconElementBaseClassName + ' text-warning';
-                outputTextElement.className = outputTextElementBaseClassName + ' text-warning';
+                mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-warning';
+                terminalOutputDisplay.className = terminalOutputDisplayBaseClassName + ' text-warning';
             }
             if (!data.running) {
                 if (data.state) {
                     if (!data.has_warning) {
-                        outputTextElement.className = outputTextElementBaseClassName + ' text-success';
-                        runningIconElement.className = runningIconElementBaseClassName + ' text-success';
+                        terminalOutputDisplay.className = terminalOutputDisplayBaseClassName + ' text-success';
+                        mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-success';
                     }
                 } else {
-                    outputTextElement.className = outputTextElementBaseClassName + ' text-danger';
-                    runningIconElement.className = runningIconElementBaseClassName + ' text-danger';
+                    terminalOutputDisplay.className = terminalOutputDisplayBaseClassName + ' text-danger';
+                    mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-danger';
                 }
                 for (const message of data.messages) {
-                    outputTextElement.value += '\n' + message;
+                    terminalOutputDisplay.value += '\n' + message;
                 }
                 setTimeout(() => {
-                    runningIconElement.style.display = 'none';
+                    mainProgramRunningIcon.style.display = 'none';
                 }, statusIconDisappearDelay);
                 clearInterval(intervalId);
             }
             if (scroll) {
-                outputTextElement.scrollTop = outputTextElement.scrollHeight;
+                terminalOutputDisplay.scrollTop = terminalOutputDisplay.scrollHeight;
             }
         } catch (error) {
-            outputTextElement.className = outputTextElementBaseClassName + ' text-danger';
-            runningIconElement.className = runningIconElementBaseClassName + ' text-danger';
+            terminalOutputDisplay.className = terminalOutputDisplayBaseClassName + ' text-danger';
+            mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-danger';
             flashMessage(err_message, 'danger');
             setTimeout(() => {
-                runningIconElement.style.display = 'none';
+                mainProgramRunningIcon.style.display = 'none';
             }, statusIconDisappearDelay);
             clearInterval(intervalId);
         }
@@ -484,33 +506,28 @@ function get_output(func_type) {
     }, 200);
 }
 
-const saveActionButtons = document.querySelectorAll('.save-action');
+initializeConfigFormEditor();
+
 saveActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
         collapseNavbar();
-        await updateProfile('update', profile);
+        await updateProfile('update', profileName);
     });
 });
-
-const resetActionButtons = document.querySelectorAll('.reset-action');
 resetActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
         collapseNavbar();
         await reload();
     });
 });
-
-const launchActionButtons = document.querySelectorAll('.launch-action');
 launchActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
         collapseNavbar();
         if (await launch()) {
-            get_output('main');
+            getTerminalOutput();
         }
     });
 });
-
-const terminateActionButtons = document.querySelectorAll('.terminate-action');
 terminateActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
         collapseNavbar();
@@ -518,23 +535,43 @@ terminateActionButtons.forEach(button => {
     });
 });
 
-profileAddButton.addEventListener('click', async () => {
-    await manage_profiles('add')
+profileConfirmButtons.forEach(button => {
+    button.addEventListener('click', async () => {
+        await manageProfiles('confirm', button)
+    });
 });
-profileRenameButton.addEventListener('click', async () => {
-    await manage_profiles('rename')
+profileCancelButtons.forEach(button => {
+    button.addEventListener('click', async () => {
+        await manageProfiles('cancel', button)
+    });
 });
-profileDeleteButton.addEventListener('click', async () => {
-    await manage_profiles('delete')
+profileAddButtons.forEach(button => {
+    button.addEventListener('click', async () => {
+        await manageProfiles('add', button)
+    });
 });
-profileConfirmButton.addEventListener('click', async () => {
-    await manage_profiles('confirm')
+profileRenameButtons.forEach(button => {
+    button.addEventListener('click', async () => {
+        await manageProfiles('rename', button)
+    });
 });
-profileCancelButton.addEventListener('click', async () => {
-    await manage_profiles('cancel')
+profileDeleteButtons.forEach(button => {
+    button.addEventListener('click', async () => {
+        await manageProfiles('delete', button)
+    });
 });
+
+jsonCodeExpandButton.addEventListener('click', () => {
+    toggleJsonCodeContent('show')
+});
+jsonCodeCollapseButton.addEventListener('click', () => {
+    toggleJsonCodeContent('hide')
+});
+
 document.addEventListener("click", async (event) => {
     if (!profileContainer.contains(event.target)) {
-        await manage_profiles('cancel')
+        await manageProfiles('cancel', null)
     }
 });
+window.addEventListener("DOMContentLoaded", focusElementFromHash);
+window.addEventListener("hashchange", focusElementFromHash);

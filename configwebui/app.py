@@ -2,10 +2,11 @@ from . import ConfigEditor, UserConfig
 from flask import (
     Blueprint,
     flash,
+    make_response,
     redirect,
     render_template,
+    send_from_directory,
     url_for,
-    make_response,
     current_app,
     request,
 )
@@ -307,7 +308,7 @@ def launch():
                 "success": True,
                 "messages": [
                     f"The main program has been successfully requested to run. "
-                    f'<a href="#main-output" class="alert-link">'
+                    f'<a href="#terminal-output-display" class="alert-link">'
                     f"Check it out below"
                     f"</a>.",
                 ],
@@ -352,5 +353,9 @@ def get_main_output():
 
 @main.route("/<path:path>")
 def catch_all(path):
+    if path == "favicon.ico":
+        return send_from_directory("static/icon", "favicon.ico")
+    if path[-1] == "/":
+        return redirect(f"/{path[:-1]}")
     flash("Page not found", "danger")
     return redirect(url_for("main.index"))

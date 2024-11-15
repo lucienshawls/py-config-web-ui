@@ -5,23 +5,34 @@
     <title>{{ title }}</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="icon" type="image/png" href="/static/icon/favicon-96x96.png" sizes="96x96">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/icon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icon/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="Editor">
+    <link rel="manifest" href="/static/icon/site.webmanifest">
+
     <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="/static/css/fontawesome.all.css">
     <link rel="stylesheet" type="text/css" href="/static/css/index.css">
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg bg-body-tertiary sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">{{ title }}</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary sticky-top" id="navbar">
+        <div class="container-fluid" id="navbar-content">
+            <a class="navbar-brand" id="navbar-brand" href="/">
+                <span><i class="fas fa-laptop-code"></i></span>
+                <span>{{ title }}</span>
+            </a>
+            <button class="navbar-toggler" id="navbar-toggle" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false"
+                aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item mx-lg-1 w-100 my-2 my-lg-0">
-                        <select class="form-select w-100" id="configSelect" onchange="navigateToConfig()"
+            <div class="collapse navbar-collapse" id="navbar-menu">
+                <ul class="navbar-nav" id="navbar-menu-content">
+                    <li class="nav-item mx-lg-1 w-100 my-2 my-lg-0" id="navbar-menu-config-select">
+                        <select class="form-select w-100" id="config-select" onchange="navigateToConfig()"
                             aria-label="Select config">
                             {% for user_config_name, user_config in user_config_store.items() %}
                             <option value="/config/{{ user_config_name | safe }}" {% if
@@ -30,23 +41,41 @@
                             {% endfor %}
                         </select>
                     </li>
-                    <li class="nav-item mx-lg-1 btn-group dropdown" id="action-dropdown-group">
-                        <button class="btn btn-primary save-action" type="button">Save</button>
+                    <li class="nav-item mx-lg-1 btn-group dropdown" id="navbar-menu-actions">
+                        <button class="btn btn-primary save-action" type="button">
+                            <span><i class="fas fa-save"></i></span>
+                            <span>Save</span>
+                        </button>
                         <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" type="button"
-                            id="navbarDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="visually-hidden">Toggle Dropdown</span>
                         </button>
-                        <ul class="dropdown-menu">
-                            <li><button class="dropdown-item menu-primary btn-primary save-action" type="button">
-                                    Save changes</button></li>
-                            <li><button class="dropdown-item menu-danger btn-danger reset-action" type="button"
-                                    id="menu-discard">
-                                    Reset</button></li>
+                        <ul class="dropdown-menu" id="navbarmenu-actions-dropdown">
+                            <li>
+                                <button class="dropdown-item menu-primary btn-primary save-action" type="button">
+                                    <span><i class="fas fa-save text-primary"></i></span>
+                                    <span>Save changes</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item menu-danger btn-danger reset-action" type="button">
+                                    <span><i class="fas fa-undo text-danger"></i></span>
+                                    <span>Reset</span>
+                                </button>
+                            </li>
                             <li class="dropdown-divider"></li>
-                            <li><button class="dropdown-item menu-success btn-success launch-action" type="button">
-                                    Launch main program</button></li>
-                            <li><button class="dropdown-item menu-danger btn-danger terminate-action" type="button">
-                                    Terminate editor</button></li>
+                            <li>
+                                <button class="dropdown-item menu-success btn-success launch-action" type="button">
+                                    <span><i class="fas fa-play text-success"></i></span>
+                                    <span>Launch main program</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item menu-danger btn-danger terminate-action" type="button">
+                                    <span><i class="fas fa-power-off text-danger"></i></span>
+                                    <span>Terminate editor</span>
+                                </button>
+                            </li>
                         </ul>
                     </li>
                 </ul>
@@ -55,9 +84,10 @@
     </nav>
     <div class="container-fluid mt-3 mb-5" id="main-page-container">
         <div class="row justify-content-center" id="main-page">
-            <div class="col-12 col-lg-10 col-xl-8">
-                <div class="row" id="flash-container">
-                    <div class="col" id="flash-messages">
+            <div class="col-12 col-lg-10 col-xl-8" id="main-page-content">
+                <!-- Flash messages -->
+                <div class="row" id="flash-messages-container">
+                    <div class="col" id="flash-messages-content">
                         {% for category, message in get_flashed_messages(with_categories=true) %}
                         <div class="alert alert-{{ category | safe }} alert-dismissible fade show" role="alert">
                             <div>{{ message | safe }}</div>
@@ -66,36 +96,92 @@
                         {% endfor %}
                     </div>
                 </div>
+                <!-- Profiles -->
                 <div class="row" id="profile-container">
                     <div class="col" id="profile">
-                        <div class="card card-body mb-2 bg-light">
-                            <div class="row">
-                                <div class="col-12 col-lg-4 col-xl-5">
-                                    <h2>Profile</h2>
+                        <div class="card card-body mb-2 bg-light" id="profile-card">
+                            <div class="row" id="profile-heading">
+                                <div class="col-12 col-lg-5" id="profile-title">
+                                    <h2>
+                                        <span>Profile</span>
+                                        <span><i class="fas fa-folder-open"></i></span>
+                                    </h2>
                                 </div>
-                                <div class="col-12 col-lg-8 col-xl-7 d-flex justify-content-end align-items-start"
-                                    id="profile-manage">
-                                    <input class="form-control me-1 border-primary" id="profile-name-edit"
-                                        title="Edit Profile Name" placeholder="Input a profile name..."
-                                        style="display: none;">
-                                    <div class="btn-group" role="group" aria-label="Confirm edit"
-                                        id="profile-confirm-group" style="display: none;">
-                                        <button type="button" class="btn btn-primary" id="profile-confirm">Confirm
-                                            Add</button>
-                                        <button type="button" class="btn btn-danger" id="profile-cancel">Cancel</button>
+                                <!-- Large screen -->
+                                <div class="col-12 col-lg-7 d-none d-lg-flex justify-content-end align-items-start"
+                                    id="profile-manage-large-screen">
+                                    <input class="form-control me-1 border-primary profile-name-edit"
+                                        id="profile-name-edit-large-screen" title="Edit Profile Name"
+                                        placeholder="New profile name..." style="display: none;">
+                                    <div class="btn-group profile-confirm-group" role="group" aria-label="Confirm"
+                                        id="profile-confirm-group-large-screen" style="display: none;">
+                                        <button type="button" class="btn btn-primary profile-confirm"
+                                            id="profile-confirm-large-screen" title="Confirm">
+                                            <span><i class="fas fa-check"></i></span>
+                                            <span>Confirm</span>
+                                        </button>
+                                        <button type="button" class="btn btn-danger profile-cancel"
+                                            id="profile-cancel-large-screen" title="Cancel">
+                                            <span><i class="fas fa-ban"></i></span>
+                                            <span>Cancel</span>
+                                        </button>
                                     </div>
-                                    <div class="btn-group" role="group" aria-label="Edit profiles"
-                                        id="profile-edit-group">
-                                        <button type="button" class="btn btn-primary" id="profile-add">Add</button>
-                                        <button type="button" class="btn btn-primary"
-                                            id="profile-rename">Rename</button>
-                                        <button type="button" class="btn btn-danger" id="profile-delete">Delete</button>
+                                    <div class="btn-group profile-actions-group" role="group" aria-label="Edit profiles"
+                                        id="profile-actions-group">
+                                        <button type="button" class="btn btn-success profile-add"
+                                            id="profile-add-large-screen" title="Add">
+                                            <span><i class="fas fa-plus"></i></span>
+                                            <span>Add</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary profile-rename"
+                                            id="profile-rename-large-screen" title="Rename">
+                                            <span><i class="fas fa-pencil-alt"></i></span>
+                                            <span>Rename</span>
+                                        </button>
+                                        <button type="button" class="btn btn-danger profile-delete"
+                                            id="profile-delete-large-screen" title="Delete">
+                                            <span><i class="fas fa-trash"></i></span>
+                                            <span>Delete</span>
+                                        </button>
                                     </div>
+                                </div>
+                                <!-- Small Screen -->
+                                <div class="col-12 mb-1 d-flex d-lg-none justify-content-start align-items-start"
+                                    id="profile-manage-small-screen">
+                                    <div class="btn-group profile-confirm-group" role="group" aria-label="Confirm"
+                                        id="profile-confirm-group-small-screen" style="display: none;">
+                                        <button type="button" class="btn btn-primary profile-confirm"
+                                            id="profile-confirm-small-screen" title="Confirm">
+                                            <span><i class="fas fa-check"></i></span>
+                                        </button>
+                                        <button type="button" class="btn btn-danger profile-cancel"
+                                            id="profile-cancel-small-screen" title="Cancel">
+                                            <span><i class="fas fa-ban"></i></span>
+                                        </button>
+                                    </div>
+                                    <div class="btn-group profile-actions-group" role="group" aria-label="Edit profiles"
+                                        id="profile-actions-group-small-screen">
+                                        <button type="button" class="btn btn-success profile-add"
+                                            id="profile-add-small-screen" title="Add">
+                                            <span><i class="fas fa-plus"></i></span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary profile-rename"
+                                            id="profile-rename-small-screen" title="Rename">
+                                            <span><i class="fas fa-pencil-alt"></i></span>
+                                        </button>
+                                        <button type="button" class="btn btn-danger profile-delete"
+                                            id="profile-delete-small-screen" title="Delete">
+                                            <span><i class="fas fa-trash"></i></span>
+                                        </button>
+                                    </div>
+                                    <input class="form-control ms-1 border-primary profile-name-edit"
+                                        id="profile-name-edit-small-screen" title="Edit Profile Name"
+                                        placeholder="New profile name..." style="display: none;">
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row" id="profile-content">
                                 <div class="col">
-                                    <select class="form-select w-100" id="profileSelect" onchange="navigateToProfile()"
+                                    <select class="form-select w-100" id="profile-select" onchange="navigateToProfile()"
                                         aria-label="Select profile">
                                         {% for profile_name in profile_names %}
                                         <option
@@ -109,45 +195,122 @@
                         </div>
                     </div>
                 </div>
-                <div class="row" id="form-container">
-                    <div class="col-12 col-lg-8" id="editor">
-                        <h2>
-                            Editor
-                            <span class="spinner-border text-primary" role="status" id="editor-loading-icon"></span>
-                        </h2>
-                        <div class="row" id="editor-container"></div>
-
-                        <div class="row justify-content-between justify-content-lg-end" id="form-action-group">
-                            <div class="col-5 col-lg-4 col-xl-3">
-                                <button class="btn btn-primary w-100 save-action" type="button">Save</button>
+                <!-- Config -->
+                <div class="row" id="config-container">
+                    <div class="col-12 col-lg-8 mb-2 mb-lg-0" id="config-form">
+                        <div class="row" id="config-form-heading">
+                            <div class="col" id="config-form-title">
+                                <h2>
+                                    <span>Editor</span>
+                                    <span><i class="fas fa-edit"></i></span>
+                                    <span class="spinner-border text-primary" role="status"
+                                        id="config-form-loading-icon" style="display: none;"></span>
+                                </h2>
                             </div>
-                            <div class="col-5 col-lg-4 col-xl-3">
-                                <button class="btn btn-danger w-100 reset-action" type="button">Reset</button>
+                        </div>
+                        <div class="collapse" id="config-form-content">
+                            <div class="row" id="config-form-edit"></div>
+                            <div class="row justify-content-between justify-content-lg-end form-actions"
+                                id="config-form-actions">
+                                <div class="col-5 col-lg-4 col-xl-3">
+                                    <button class="btn btn-primary w-100 save-action" type="button">
+                                        <span><i class="fas fa-save"></i></span>
+                                        <span>Save</span>
+                                    </button>
+                                </div>
+                                <div class="col-5 col-lg-4 col-xl-3">
+                                    <button class="btn btn-danger w-100 reset-action" type="button">
+                                        <span><i class="fas fa-undo"></i></span>
+                                        <span>Reset</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="collapse show" id="config-form-content-placeholder">
+                            <div class="row" id="config-form-edit-placeholder">
+                                <div>
+                                    <p class="placeholder-wave" aria-hidden="true">
+                                        <span class="h3 placeholder col-1"></span>
+                                    </p>
+                                    <div class="card card-body mb-3 bg-light" aria-hidden="true">
+                                        <p class="placeholder-wave"><span class="h4 placeholder col-2"></span></p>
+                                        <p class="placeholder-glow"><input class="form-control placeholder" type="text"
+                                                disabled></p>
+                                        <p class="placeholder-wave"><span class="placeholder col-5"></span></p>
+                                        <p class="placeholder-wave"><span class="h4 placeholder col-3"></span></p>
+                                        <p class="placeholder-glow"><input class="form-control placeholder" type="text"
+                                                disabled></p>
+                                        <p class="placeholder-wave"><span class="h4 placeholder col-1"></span></p>
+                                        <p class="placeholder-glow"><input class="form-control placeholder" type="text"
+                                                disabled></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row justify-content-between justify-content-lg-end form-actions placeholder-wave"
+                                id="config-form-actions-placeholder">
+                                <div class="col-5 col-lg-4 col-xl-3">
+                                    <button class="btn btn-primary w-100 disabled placeholder" type="button"></button>
+                                </div>
+                                <div class="col-5 col-lg-4 col-xl-3">
+                                    <button class="btn btn-danger w-100 disabled placeholder" type="button"></button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-12 col-lg-4" id="dashboard">
-                        <div class="row" id="json-preview">
+                    <div class="col-12 col-lg-4 mb-2 mb-lg-0" id="json-code">
+                        <div class="row" id="json-code-heading">
+                            <div class="col-10" id="json-code-title">
+                                <h2>
+                                    <span>Json</span>
+                                    <span><i class="fas fa-code"></i></span>
+                                </h2>
+                            </div>
+                            <div class="col-2 mb-1 mb-lg-0 d-flex justify-content-end align-items-start"
+                                id="json-code-toggle">
+                                <button class="btn btn-outline-primary" type="button" id="json-code-expand"><i
+                                        class="fas fa-expand"></i></button>
+                                <button class="btn btn-primary" type="button" id="json-code-collapse"
+                                    style="display:none;"><i class="fas fa-compress"></i></button>
+                            </div>
+                        </div>
+                        <div class="row collapse" id="json-code-content">
                             <div class="col">
-                                <h2>Preview json</h2>
-                                <button class="btn btn-primary w-100" type="button" disabled>Edit json</button>
-                                <textarea id="json-preview-text" class="form-control code-text" title="Preview json"
+                                <!-- <button class="btn btn-primary w-100" type="button" disabled>Edit json</button> -->
+                                <textarea id="json-code-edit" class="form-control code-text" title="Json"
                                     placeholder="After the editor is loaded, the corresponding json string will show here."
                                     readonly></textarea>
                             </div>
                         </div>
+                        <div class="row collapse show" id="json-code-content-placeholder">
+                            <div class="col d-flex justify-content-center align-items-center">
+                                <button class="btn btn-secondary bg-light w-100" disabled>
+                                    <span class="h3">Hidden</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="row" id="main-output">
-                    <div class="col">
-                        <h2>
-                            Output of main program
-                            <span class="spinner-border text-primary" role="status"
-                                id="main-program-running-icon"></span>
-                        </h2>
-                        <textarea id="main-output-text" class="form-control code-text" title="Output of main program"
-                            placeholder="After you launch the main program, the output will show here. Resets when refreshing the page."
-                            readonly></textarea>
+                <!-- Terminal output -->
+                <div class="row" id="terminal-output-container">
+                    <div class="col" id="terminal-output">
+                        <div class="row" id="terminal-output-heading">
+                            <div class="col" id="terminal-output-title">
+                                <h2>
+                                    <span>Terminal Output</span>
+                                    <span><i class="fas fa-terminal"></i></span>
+                                    <span class="spinner-border text-primary" role="status"
+                                        id="main-program-running-icon" style="display: none;"></span>
+                                </h2>
+                            </div>
+                        </div>
+                        <div class="row" id="terminal-output-content">
+                            <div class="col">
+                                <textarea id="terminal-output-display" class="form-control code-text"
+                                    title="Terminal output"
+                                    placeholder="After you launch the main program, the output will show here. Resets when refreshing the page."
+                                    readonly></textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

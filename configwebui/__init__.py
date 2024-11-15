@@ -472,6 +472,7 @@ class UserConfig:
             return ResultStatus(
                 False, f"Profile name must be a string, not {type(name)}."
             )
+        name = name.strip()
         if name == "":
             return ResultStatus(False, "Profile name cannot be empty.")
         if self.has_profile(name=name):
@@ -504,6 +505,7 @@ class UserConfig:
     ) -> ResultStatus:
         if name is None:
             name = UserConfig.DEFAULT_PROFILE_NAME
+        name = name.strip()
         if name == "":
             return ResultStatus(False, "Profile name cannot be empty.")
         if config is None:
@@ -618,6 +620,7 @@ class UserConfig:
             raise TypeError(
                 f"friendly_name must be a string, not {type(friendly_name)}."
             )
+        name = name.strip()
         if name == "":
             raise ValueError("Config name cannot be empty.")
         self.name = name
@@ -625,6 +628,7 @@ class UserConfig:
             raise TypeError(
                 f"friendly_name must be a string, not {type(friendly_name)}."
             )
+        friendly_name = friendly_name.strip()
         if friendly_name == "":
             raise ValueError("Config friendly name cannot be empty.")
         self.friendly_name = friendly_name
@@ -664,6 +668,7 @@ class ConfigEditor:
 
         if not isinstance(app_name, str):
             raise TypeError(f"app_name must be a string, not {type(app_name)}.")
+        app_name = app_name.strip()
         if app_name == "":
             raise ValueError("app_name cannot be empty.")
         if main_entry is None:
