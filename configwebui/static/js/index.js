@@ -3,9 +3,12 @@
 let editor;
 let editor_is_ready = false;
 let currentProfileEditAction = '';
+let fetchingTerminalOutput = false;
+let pendingClearTerminalOutput = false;
 
 const pageRefreshDelay = 400;
 const statusIconDisappearDelay = 400;
+const terminalOutputDisplayRefreshDelay = 200;
 
 const pathName = window.location.pathname;
 const pathNameParts = pathName.split('/').filter(part => part !== '');
@@ -49,8 +52,11 @@ const jsonCodeContent = document.querySelector('#json-code-content');
 const jsonCodeEdit = document.querySelector('#json-code-edit');
 const jsonCodeContentPlaceholder = document.querySelector('#json-code-content-placeholder');
 
+const terminalOutputHeading = document.querySelector('#terminal-output-heading');
 const mainProgramRunningIcon = document.querySelector('#main-program-running-icon');
 const mainProgramRunningIconBaseClassName = mainProgramRunningIcon.className;
+const terminalOutputRefreshButton = document.querySelector('#terminal-output-refresh');
+const terminalOutputClearButton = document.querySelector('#terminal-output-clear');
 const terminalOutputDisplay = document.querySelector('#terminal-output-display');
 const terminalOutputDisplayBaseClassName = terminalOutputDisplay.className;
 
@@ -83,13 +89,29 @@ function navigateToConfig() {
     }
 }
 
-function flashMessage(message, category) {
-    const messageHTML = `<div class="alert alert-${category} alert-dismissible fade show" role="alert"><div>${message}</div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
+function flashMessage(message, category, scroll = true) {
+    const iconClass = {
+        'info': 'fas fa-info-circle',
+        'success': 'fas fa-check-circle',
+        'warning': 'fas fa-exclamation-triangle',
+        'danger': 'fas fa-times-circle'
+    };
+    const messageHTML = `
+        <div class="alert alert-${category} alert-dismissible fade show" role="alert">
+            <div>
+                <span><i class="${iconClass[category]}"></i></span>
+                <span>${message}</span>
+            </div>
+            <button class="btn-close" type="button" title="Dismiss" data-bs-dismiss="alert" aria-label="Dismiss"></button>
+        </div>
+    `;
     flashMessagesContent.insertAdjacentHTML('beforeend', messageHTML);
-    window.scroll({
-        top: 0,
-        behavior: 'smooth'
-    });
+    if (scroll) {
+        window.scroll({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
     return messageHTML;
 }
 
@@ -153,7 +175,6 @@ async function manageProfiles(action, button) {
         }
         profileConfirmGroups.forEach(element => { element.style.removeProperty('display'); });
         profileActionsGroups.forEach(element => { element.style.display = 'none'; });
-        // profileConfirmButtons.forEach(element => { element.textContent = 'Confirm ' + action.charAt(0).toUpperCase() + action.slice(1); });
     }
 }
 async function getConfigAndSchema() {
@@ -377,14 +398,14 @@ async function launch() {
             method: 'GET',
         });
         const data = await response.json();
-        let messageCategory;
-        if (data.success) {
-            messageCategory = 'success';
-        } else {
-            messageCategory = 'danger';
-        }
+        const messageCategory = (data.success ? 'success' : 'danger');
+        const scroll = (data.success ? false : true);
         for (const message of data.messages) {
-            flashMessage(message, messageCategory);
+            flashMessage(message, messageCategory, scroll);
+        }
+        if (!scroll) {
+            terminalOutputHeading.scrollIntoView({ behavior: "smooth" });
+            terminalOutputDisplay.focus();
         }
         return data.success;
     } catch (error) {
@@ -442,32 +463,91 @@ async function initializeConfigFormEditor() {
     });
 }
 
-function getTerminalOutput() {
-    let complete = true;
-    const url = "/api/get_main_output";
-    const err_message = 'Failed to get output from the main program.';
-    mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-primary';
-    mainProgramRunningIcon.style.display = 'inline-block';
+function processCarriageReturn(input) {
+    const lines = input.split('\n');
+
+    const processedLines = lines.map(line => {
+        const parts = line.split('\r');
+        let result = '';
+
+        for (let i = parts.length - 1; i >= 0; i--) {
+            result = result + parts[i].substring(result.length);
+        }
+
+        return result;
+    });
+
+    return processedLines.join('\n');
+}
+
+async function clearTerminalOutput() {
+    const url = "/api/clear_terminal_output";
+    await fetch(url, {
+        method: 'POST',
+    });
+    pendingClearTerminalOutput = true;
     terminalOutputDisplay.value = '';
+    terminalOutputDisplay.wrap = "on";
+    terminalOutputDisplay.className = terminalOutputDisplayBaseClassName;
+}
+
+function getTerminalOutput(recentOnly) {
+    if (fetchingTerminalOutput) {
+        return;
+    }
+    let lastRequestComplete = true;
+    const url = "/api/get_terminal_output";
+    const err_message = 'Failed to get output from the main program.';
+    if (!recentOnly) {
+        console.log('yes')
+        terminalOutputDisplay.value = '';
+    }
+    let textSinceLastLine = '';
+    let textUntilLastLine = terminalOutputDisplay.value;
     terminalOutputDisplay.className = terminalOutputDisplayBaseClassName;
     terminalOutputDisplay.scrollTop = terminalOutputDisplay.scrollHeight;
+
+    mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-primary';
+
     const intervalId = setInterval(async () => {
-        if (!complete) {
+        if (!lastRequestComplete) {
             return;
         }
+        mainProgramRunningIcon.style.display = 'inline-block';
         try {
-            complete = false;
-            const response = await fetch(url, {
+            lastRequestComplete = false;
+            if (pendingClearTerminalOutput) {
+                terminalOutputDisplay.value = '';
+                terminalOutputDisplay.wrap = "on";
+                textSinceLastLine = '';
+                textUntilLastLine = '';
+                pendingClearTerminalOutput = false;
+            }
+            const currentURL = url + '?recent_only=' + (recentOnly ? '1' : '0');
+
+            const response = await fetch(currentURL, {
                 method: 'GET',
             });
             const data = await response.json();
-
+            recentOnly = true;
             let scroll = false;
             if (terminalOutputDisplay.scrollTop + terminalOutputDisplay.clientHeight >= terminalOutputDisplay.scrollHeight - 10) {
                 scroll = true;
             }
+
+            const terminalText = textSinceLastLine + data.combined_output;
+
+            const lastNewlineIndex = terminalText.lastIndexOf('\n');
+            if (lastNewlineIndex !== -1) {
+                textUntilLastLine += processCarriageReturn(terminalText.substring(0, lastNewlineIndex + 1));
+                textSinceLastLine = terminalText.substring(lastNewlineIndex + 1);
+            } else {
+                textSinceLastLine = terminalText;
+            }
+
             terminalOutputDisplay.wrap = "off";
-            terminalOutputDisplay.value += data.combined_output;
+            terminalOutputDisplay.value = textUntilLastLine + processCarriageReturn(textSinceLastLine);
+
             if (data.has_warning) {
                 mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-warning';
                 terminalOutputDisplay.className = terminalOutputDisplayBaseClassName + ' text-warning';
@@ -483,11 +563,12 @@ function getTerminalOutput() {
                     mainProgramRunningIcon.className = mainProgramRunningIconBaseClassName + ' text-danger';
                 }
                 for (const message of data.messages) {
-                    terminalOutputDisplay.value += '\n' + message;
+                    terminalOutputDisplay.value += '\n' + message + '\n';
                 }
                 setTimeout(() => {
                     mainProgramRunningIcon.style.display = 'none';
                 }, statusIconDisappearDelay);
+                fetchingTerminalOutput = false;
                 clearInterval(intervalId);
             }
             if (scroll) {
@@ -500,10 +581,12 @@ function getTerminalOutput() {
             setTimeout(() => {
                 mainProgramRunningIcon.style.display = 'none';
             }, statusIconDisappearDelay);
+            fetchingTerminalOutput = false;
             clearInterval(intervalId);
         }
-        complete = true;
-    }, 200);
+        lastRequestComplete = true;
+    }, terminalOutputDisplayRefreshDelay);
+    fetchingTerminalOutput = true;
 }
 
 initializeConfigFormEditor();
@@ -524,7 +607,7 @@ launchActionButtons.forEach(button => {
     button.addEventListener('click', async () => {
         collapseNavbar();
         if (await launch()) {
-            getTerminalOutput();
+            getTerminalOutput(true);
         }
     });
 });
@@ -537,40 +620,47 @@ terminateActionButtons.forEach(button => {
 
 profileConfirmButtons.forEach(button => {
     button.addEventListener('click', async () => {
-        await manageProfiles('confirm', button)
+        await manageProfiles('confirm', button);
     });
 });
 profileCancelButtons.forEach(button => {
     button.addEventListener('click', async () => {
-        await manageProfiles('cancel', button)
+        await manageProfiles('cancel', button);
     });
 });
 profileAddButtons.forEach(button => {
     button.addEventListener('click', async () => {
-        await manageProfiles('add', button)
+        await manageProfiles('add', button);
     });
 });
 profileRenameButtons.forEach(button => {
     button.addEventListener('click', async () => {
-        await manageProfiles('rename', button)
+        await manageProfiles('rename', button);
     });
 });
 profileDeleteButtons.forEach(button => {
     button.addEventListener('click', async () => {
-        await manageProfiles('delete', button)
+        await manageProfiles('delete', button);
     });
 });
 
 jsonCodeExpandButton.addEventListener('click', () => {
-    toggleJsonCodeContent('show')
+    toggleJsonCodeContent('show');
 });
 jsonCodeCollapseButton.addEventListener('click', () => {
-    toggleJsonCodeContent('hide')
+    toggleJsonCodeContent('hide');
+});
+
+terminalOutputRefreshButton.addEventListener('click', () => {
+    getTerminalOutput(false);
+});
+terminalOutputClearButton.addEventListener('click', () => {
+    clearTerminalOutput();
 });
 
 document.addEventListener("click", async (event) => {
     if (!profileContainer.contains(event.target)) {
-        await manageProfiles('cancel', null)
+        await manageProfiles('cancel', null);
     }
 });
 window.addEventListener("DOMContentLoaded", focusElementFromHash);

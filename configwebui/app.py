@@ -12,6 +12,16 @@ from flask import (
 )
 from markupsafe import escape
 
+ICON_CLASS = {
+    "info": "fas fa-info-circle",
+    "success": "fas fa-check-circle",
+    "warning": "fas fa-exclamation-triangle",
+    "danger": "fas fa-times-circle",
+}
+ICON = {
+    category: f'<i class="{ICON_CLASS[category]}"></i>'
+    for category in ICON_CLASS.keys()
+}
 
 main = Blueprint("main", __name__)
 
@@ -25,7 +35,10 @@ def index(config_name: str = None):
         current_user_config_name = current_config_editor.get_user_config_names()[0]
     else:
         if config_name not in current_config_editor.get_user_config_names():
-            flash(f"No such config: <strong>{escape(config_name)}</strong>", "danger")
+            flash(
+                f'<span>{ICON["danger"]}</span> <span>No such config: <strong>{escape(config_name)}</strong></span>',
+                "danger",
+            )
             return redirect(url_for("main.index"))
         current_user_config_name = config_name
     current_user_config_object = current_config_editor.get_user_config(
@@ -40,13 +53,16 @@ def index(config_name: str = None):
     else:
         current_profile_name = profile_names[0]
     flash(
+        f'<span>{ICON["info"]}</span> '
+        f"<span>"
         f"You are currently editing: Profile "
         f'<a class="alert-link" href="/config/{escape(current_user_config_name)}/{escape(current_profile_name)}">'
         f"{escape(current_profile_name)}"
         f"</a> of "
         f'<a class="alert-link" href="/config/{escape(current_user_config_name)}">'
         f"{escape(current_user_config_object.get_friendly_name())}"
-        f"</a>.",
+        f"</a>."
+        f"</span>",
         "info",
     )
     return redirect(
@@ -68,17 +84,23 @@ def user_config_page(user_config_name: str, profile_name: str):
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
     user_config_names = current_config_editor.get_user_config_names()
     if user_config_name not in user_config_names:
-        flash(f"No such config: <strong>{escape(user_config_name)}</strong>", "danger")
+        flash(
+            f'<span>{ICON["danger"]}</span> <span>No such config: <strong>{escape(user_config_name)}</strong></span>',
+            "danger",
+        )
         return redirect(url_for("main.index"))
     user_config_object = current_config_editor.get_user_config(
         user_config_name=user_config_name
     )
     if not user_config_object.has_profile(profile_name):
         flash(
+            f'<span>{ICON["info"]}</span> '
+            f"<span>"
             f"No such profile: <strong>{escape(profile_name)}</strong> in "
             f'<a class="alert-link" href="/config/{escape(user_config_name)}">'
             f"{escape(user_config_object.get_friendly_name())}"
-            f"</a>.",
+            f"</a>."
+            f"</span>",
             "danger",
         )
         return redirect(url_for("main.index"))
@@ -205,7 +227,10 @@ def user_config_api(user_config_name: str, profile_name: str):
         )
         if res_rename.get_status():
             for message in res_rename.get_messages():
-                flash(message, "warning")
+                flash(
+                    f'<span>{ICON["warning"]}</span> <span>{message}</span>',
+                    "warning",
+                )
             return make_response(
                 {
                     "success": True,
@@ -275,7 +300,10 @@ def user_config_api(user_config_name: str, profile_name: str):
         )
         if res_delete.get_status():
             for message in res_delete.get_messages():
-                flash(message, "warning")
+                flash(
+                    f'<span>{ICON["warning"]}</span> <span>{message}</span>',
+                    "warning",
+                )
             return make_response(
                 {
                     "success": True,
@@ -332,8 +360,16 @@ def shutdown():
     return make_response("", 204)
 
 
-@main.route("/api/get_main_output")
-def get_main_output():
+@main.route("/api/clear_terminal_output", methods=["POST"])
+def clear_terminal_output():
+    current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
+    current_config_editor.main_entry_runner.clear()
+    return make_response("", 204)
+
+
+@main.route("/api/get_terminal_output")
+def get_terminal_output():
+    recent_only = bool(int(request.args.get("recent_only", "0")))
     current_config_editor: ConfigEditor = current_app.config["ConfigEditor"]
     res = current_config_editor.main_entry_runner.get_res()
     return make_response(
@@ -344,7 +380,7 @@ def get_main_output():
             "has_warning": current_config_editor.main_entry_runner.has_warning(),
             "running": current_config_editor.main_entry_runner.is_running(),
             "combined_output": current_config_editor.main_entry_runner.get_combined_output(
-                recent_only=True
+                recent_only=recent_only
             ),
         },
         200,
@@ -357,5 +393,8 @@ def catch_all(path):
         return send_from_directory("static/icon", "favicon.ico")
     if path[-1] == "/":
         return redirect(f"/{path[:-1]}")
-    flash("Page not found", "danger")
+    flash(
+        f'<span>{ICON["danger"]}</span> <span>Page not found</span>',
+        "danger",
+    )
     return redirect(url_for("main.index"))

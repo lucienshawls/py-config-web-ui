@@ -9,7 +9,7 @@ html {
 }
 
 html * {
-    scroll-margin-top: 5rem;
+    scroll-margin-top: 8rem;
 }
 
 h2>.spinner-border {
