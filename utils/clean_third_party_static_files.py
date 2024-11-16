@@ -3,6 +3,15 @@ import os
 STATIC_DIRECTORY = "configwebui/static"
 CUSTOM_STATIC_FILES_BY_DIRECTORY = {
     "css": ["index.css"],
+    "icon": [
+        "apple-touch-icon.png",
+        "favicon-96x96.png",
+        "favicon.ico",
+        "favicon.svg",
+        "site.webmanifest",
+        "web-app-manifest-192x192.png",
+        "web-app-manifest-512x512.png",
+    ],
     "js": ["index.js"],
 }
 
