@@ -182,7 +182,7 @@ def user_config_page(user_config_name: str, profile_name: str):
     )
     if not user_config_object.has_profile(profile_name):
         flash(
-            f'<span>{ICON["info"]}</span> '
+            f'<span>{ICON["danger"]}</span> '
             f"<span>"
             f"No such profile: <strong>{escape(profile_name)}</strong> in "
             f'<a class="alert-link" href="/config/{escape(user_config_name)}">'
