@@ -1,3 +1,19 @@
+"""
+Metadata for the configwebui package.
+
+This file contains the metadata for the 'configwebui' package, including:
+- Version information
+- Author details
+- License type
+- Description of the package
+- Dependencies required for the package
+- Keywords for search optimization
+- A URL to the project's repository
+
+This information is used by various tools such as packaging systems 
+and documentation generators.
+"""
+
 # configwebui
 
 __version__ = "0.2.1"
