@@ -51,6 +51,7 @@ const jsonCodeCollapseButton = document.querySelector('#json-code-collapse');
 const jsonCodeContent = document.querySelector('#json-code-content');
 const jsonCodeEdit = document.querySelector('#json-code-edit');
 const jsonCodeContentPlaceholder = document.querySelector('#json-code-content-placeholder');
+const jsonCodeContentPlaceholderLabel = jsonCodeContentPlaceholder.querySelector('button > span');
 
 const terminalOutputHeading = document.querySelector('#terminal-output-heading');
 const mainProgramRunningIcon = document.querySelector('#main-program-running-icon');
@@ -197,6 +198,47 @@ async function getConfigAndSchema() {
         configFormLoadingIcon.className = configFormLoadingIconBaseClassName + ' text-danger';
     }
     return res;
+}
+
+function hasPasswordFormat(schema) {
+    if (typeof schema !== "object" || schema === null) {
+        return false;
+    }
+
+    if (schema.format === "password") {
+        return true;
+    }
+
+    if (schema.properties) {
+        for (const key in schema.properties) {
+            if (hasPasswordFormat(schema.properties[key])) {
+                return true;
+            }
+        }
+    }
+
+    if (schema.items) {
+        if (Array.isArray(schema.items)) {
+            for (const item of schema.items) {
+                if (hasPasswordFormat(item)) {
+                    return true;
+                }
+            }
+        } else if (hasPasswordFormat(schema.items)) {
+            return true;
+        }
+    }
+
+    if (schema.anyOf || schema.oneOf || schema.allOf) {
+        const schemas = schema.anyOf || schema.oneOf || schema.allOf;
+        for (const subSchema of schemas) {
+            if (hasPasswordFormat(subSchema)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 function changeCheckboxStyle() {
@@ -457,7 +499,12 @@ async function initializeConfigFormEditor() {
         editor_is_ready = true;
         setTimeout(() => { changeStyle(); }, 0);
         showConfigFormContent();
-        toggleJsonCodeContent('show');
+        if (hasPasswordFormat(myschema)) {
+            jsonCodeContentPlaceholderLabel.textContent = 'Expanding JSON may expose sensitive information.';
+            jsonCodeExpandButton.className = 'btn btn-outline-danger';
+        } else {
+            toggleJsonCodeContent('show');
+        }
         setTimeout(() => { configFormLoadingIcon.style.display = 'none'; }, statusIconDisappearDelay)
         jsonCodeEdit.wrap = "off";
     });
