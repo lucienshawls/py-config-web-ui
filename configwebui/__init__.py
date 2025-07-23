@@ -827,7 +827,10 @@ class UserConfig:
         self.config = {}
 
     @staticmethod
-    def default_extra_validation_func(name: str, config: dict) -> ResultStatus:
+    def default_extra_validation_func(
+        name: str,
+        config: dict,
+    ) -> ResultStatus:
         """
         Default extra validation function.
 
@@ -1083,11 +1086,12 @@ class UserConfig:
         )
         if not res_check.get_status():
             return res_check
+        self.config[name] = config
         if save_file:
             res_save = self.save(profile_name=name, config=config)
             if not res_save.get_status():
+                del self.config[name]
                 return res_save
-        self.config[name] = config
         return ResultStatus(True)
 
     def rename_profile(
@@ -1207,7 +1211,7 @@ class UserConfig:
         Returns:
             dict: JSON schema.
         """
-        return self.schema
+        return deepcopy(self.schema)
 
     def get_config(self, profile_name: str) -> dict | None:
         """
