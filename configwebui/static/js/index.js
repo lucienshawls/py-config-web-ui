@@ -129,13 +129,9 @@ function navigateToProfile() {
     }
 }
 
-async function manageProfiles(action, button) {
-    let profileNameEditText;
+async function manageProfiles(action, profileNameEditText) {
     if (action === 'confirm') {
-        if (button) {
-            const grandParent = button.parentElement.parentElement;
-            profileNameEditText = grandParent.querySelector("input.profile-name-edit");
-        } else {
+        if (!profileNameEditText) {
             return;
         }
         let res;
@@ -190,11 +186,11 @@ async function getConfigAndSchema() {
         }
         else {
             configFormLoadingIcon.className = configFormLoadingIconBaseClassName + ' text-danger';
-            flashMessage('Failed to get config from server', 'danger');
+            flashMessage('Failed to get config from server.', 'danger');
         }
     }
     catch (error) {
-        flashMessage('Failed to get config from server', 'danger');
+        flashMessage('Failed to get config from server.', 'danger');
         configFormLoadingIcon.className = configFormLoadingIconBaseClassName + ' text-danger';
     }
     return res;
@@ -667,7 +663,7 @@ terminateActionButtons.forEach(button => {
 
 profileConfirmButtons.forEach(button => {
     button.addEventListener('click', async () => {
-        await manageProfiles('confirm', button);
+        await manageProfiles('confirm', button.parentElement.parentElement.querySelector('.profile-name-edit'));
     });
 });
 profileCancelButtons.forEach(button => {
@@ -688,6 +684,14 @@ profileRenameButtons.forEach(button => {
 profileDeleteButtons.forEach(button => {
     button.addEventListener('click', async () => {
         await manageProfiles('delete', button);
+    });
+});
+
+profileNameEditTexts.forEach(element => {
+    element.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            manageProfiles('confirm', element);
+        }
     });
 });
 
