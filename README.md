@@ -1,5 +1,6 @@
 # pyConfigWebUI
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/lucienshawls/py-config-web-ui)
 [![Build Status](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml/badge.svg)](https://github.com/lucienshawls/py-config-web-ui/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/lucienshawls/py-config-web-ui)](LICENSE)
 [![Latest Release Tag](https://img.shields.io/github/v/release/lucienshawls/py-config-web-ui)](https://github.com/lucienshawls/py-config-web-ui/releases/latest)
@@ -44,7 +45,7 @@ pip install -r ./requirements.txt
 
 3. Run demo!
 ```shell
-python ./examples/demo.py
+python ./demo/demo_ui.py
 ```
 
 4. Switch to your web browser
@@ -52,7 +53,7 @@ python ./examples/demo.py
 If your browser does not pop up, visit the link that shows in your terminal.
 
 5. Edit and save any config
-6. See if your config has been saved to `./examples/config`
+6. See if your config has been saved to `./demo/config`
 7. Click `Launch main program` (a submenu from `Save` in the navigation bar) and checkout the terminal output
 
 It should output some messages based on your config.
@@ -85,9 +86,24 @@ They have exactly the same effect.
 
 When user clicks the `Save` button on the webpage, the config will first pass the extra validations before it can be saved to the memory. You can set up your own validation function.
 
-Your function should take one positional argument, which is for the config itself (`config`).
+Your function should take one positional argument, which is for the config itself (`config`) and accepts a `dict`.
 
-Your function should return a `ResultStatus` object or a `boolean` value. If you choose the former, you can attach several error messages that the user can see on the webpage.
+Your function should return a `ResultStatus` object or a `boolean` value. 
+
+If you choose the former, you can attach several error messages that the user can see on the webpage. For example, instantiate a `ResultStatus` object and set the messages:
+
+```python
+# True indicates a success
+res1 = ResultStatus(True, "Success!")
+
+# False indicates a failure
+res2 = ResultStatus(False, ["Failed!", "Incorrect format"])  # Message lists are also supported
+
+# Alternatively, you can also instantiate a ResultStatus object with no messages, and add messages or change status later.
+res3 = ResultStatus(True)
+res3.set_status(False)
+res3.add_message("message 1")
+```
 
 This function is related to a specific `UserConfig` that you set up later.
 
