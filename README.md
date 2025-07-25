@@ -11,6 +11,22 @@ This package provides tools for editing configuration files
 in a user-friendly web interface.
 
 Package on PyPI: [configwebui-lucien · PyPI](https://pypi.org/project/configwebui-lucien/)
+## What It Does
+
+**ConfigWebUI** is a lightweight and intuitive web-based configuration editor designed for Python applications. It allows developers to quickly generate user-friendly configuration interfaces from JSON schemas, enabling seamless configuration management without requiring users to understand the underlying file syntax.
+
+### Features
+
+- **Generate Configuration Interfaces Easily**: Provide a JSON schema, and ConfigWebUI generates a complete UI for configuration management.
+- **Support for Profiles**: Manage multiple configuration profiles for the same schema. Easily switch between profiles without editing configurations each time.
+- **Validation with Schema and Custom Logic**: The package validates configurations against the schema as users edit, ensuring data accuracy, and developers can specify additional backend validation to suit specific requirements.
+- **Asynchronous Processing**: Supports asynchronous program execution with real-time status updates.
+- **Interactive Terminal Output**: View and manage real-time program logs directly in the web UI.
+- **Non-intrusive Integration**: Easily integrates into existing Python projects without interfering with their core functionality. The tool operates independently and does not alter the program's behavior unless explicitly used.
+- **Seamless Fallback**: After applying this tool, your program can still run normally even if the web-based interface is not accessed. This ensures uninterrupted functionality in all scenarios.
+
+### Screenshots
+
 
 ## Try it out
 To get an intuitive understanding of how to use this tool, you can do the following:
@@ -21,7 +37,7 @@ git clone https://github.com/lucienshawls/py-config-web-ui
 cd ./py-config-web-ui
 ```
 
-2. Install dependencies in a virtual environment or a conda environment (to avoid conflicts)
+2. Install dependencies in a virtual environment or a conda environment to avoid conflicts (or not).
 ```shell
 pip install -r ./requirements.txt
 ```
@@ -37,7 +53,7 @@ If your browser does not pop up, visit the link that shows in your terminal.
 
 5. Edit and save any config
 6. See if your config has been saved to `./examples/config`
-7. Click `Launch main program` (a submenu from `Save`) and checkout the terminal
+7. Click `Launch main program` (a submenu from `Save` in the navigation bar) and checkout the terminal output
 
 It should output some messages based on your config.
 
