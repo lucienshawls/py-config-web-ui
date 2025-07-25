@@ -63,13 +63,13 @@ import traceback
 import webbrowser
 from collections.abc import Callable
 from copy import deepcopy
+from importlib.metadata import version, PackageNotFoundError
 from socket import setdefaulttimeout
 
 from flask import Flask
 from jsonschema import ValidationError, validate
 from werkzeug.serving import make_server
 
-from .__metadata__ import *
 from .utils import (
     BASE_ERROR_STREAM,
     BASE_OUTPUT_STREAM,
@@ -78,7 +78,11 @@ from .utils import (
     ThreadOutputStream,
 )
 
-__all__ = ["ConfigEditor", "UserConfig"]
+try:
+    __version__ = version("configwebui-lucien")
+except PackageNotFoundError:
+    pass
+__all__ = ["ConfigEditor", "UserConfig", "ResultStatus"]
 
 SERVER_TIMEOUT = 3
 DAEMON_CHECK_INTERVAL = 1
