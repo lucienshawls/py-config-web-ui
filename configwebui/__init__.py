@@ -6,24 +6,24 @@ This package provides tools for editing configuration files
 (like json or yaml) in a user-friendly web interface.
 
 This module contains the core functionality of the `configwebui` package. It provides classes and methods
-for building and managing a web-based configuration editor interface. 
+for building and managing a web-based configuration editor interface.
 
 The primary components of this module include:
 
 - `ConfigEditor`: The main class that manages the configuration editor, including handling user configurations,
   launching the web server, and providing a user-friendly interface for editing and validating configurations.
-  
-- `UserConfig`: A class that represents individual user configurations, enabling storage, validation, and 
+
+- `UserConfig`: A class that represents individual user configurations, enabling storage, validation, and
   management of user-provided configuration data.
 
 - `ResultStatus`: A class representing the status of an operation (success/failure) with associated messages.
-  
+
 This module also manages the configuration flow, including:
 - Adding, retrieving, and deleting user configurations.
 - Running the main entry point function and capturing its output.
 - Starting and stopping the web server that serves the configuration editor.
 - Handling server cleanup and restoring the terminal output.
-  
+
 The `configwebui` package allows developers to quickly generate an interactive web-based UI for configuration editing,
 making it easier for users to modify and validate configuration files visually without needing to interact with
 configuration file syntax directly. It supports real-time validation and error reporting, asynchronous saving of
@@ -49,7 +49,7 @@ Usage Example:
     editor.run()
     ```
 
-This module serves as the foundation for the `configwebui` package and enables developers to integrate 
+This module serves as the foundation for the `configwebui` package and enables developers to integrate
 a customizable configuration interface into their applications with minimal effort.
 
 """
@@ -775,6 +775,7 @@ class UserConfig:
         schema: dict | None = None,
         extra_validation_func: Callable | None = None,
         save_func: Callable | None = None,
+        default_profile_only: bool = False,
     ) -> None:
         """
         Initializes a UserConfig instance.
@@ -825,6 +826,18 @@ class UserConfig:
             self.save_func = save_func
         self.set_schema(schema=schema)
         self.config = {}
+
+        if not isinstance(default_profile_only, bool):
+            raise TypeError(
+                f"default_profile_only must be a boolean, not {type(default_profile_only)}."
+            )
+
+        self.default_profile_only = default_profile_only
+
+        # self.default_profile_only = False
+        # if default_profile_only:
+        #     self.add_profile(name=UserConfig.DEFAULT_PROFILE_NAME, save_file=False)
+        #     self.default_profile_only = True
 
     @staticmethod
     def default_extra_validation_func(
@@ -1023,6 +1036,10 @@ class UserConfig:
             return ResultStatus(False, "Profile name cannot be empty.")
         if self.has_profile(name=name):
             return ResultStatus(False, f"Profile {name} already exists.")
+        if name != UserConfig.DEFAULT_PROFILE_NAME and self.default_profile_only:
+            return ResultStatus(
+                False, "Custom profiles are disabled, use the default profile only."
+            )
         return self.update_profile(
             name=name,
             config=config,
@@ -1072,11 +1089,19 @@ class UserConfig:
         Returns:
             ResultStatus: Result of the operation.
         """
+        if not isinstance(name, str) and name is not None:
+            return ResultStatus(
+                False, f"Profile name must be a string, not {type(name)}."
+            )
         if name is None:
             name = UserConfig.DEFAULT_PROFILE_NAME
         name = name.strip()
         if name == "":
             return ResultStatus(False, "Profile name cannot be empty.")
+        if self.default_profile_only and name != UserConfig.DEFAULT_PROFILE_NAME:
+            return ResultStatus(
+                False, "Custom profiles are disabled, use the default profile only."
+            )
         if config is None:
             config = UserConfig.generate_default_json(self.schema)
         res_check = self.check(
