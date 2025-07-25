@@ -3,7 +3,7 @@ import re
 import requests
 from urllib.parse import urljoin
 
-STATIC_FILE_DIRECTORY = "configwebui/static"
+STATIC_FILE_DIRECTORY = "src/configwebui/static"
 VERSION = {
     "json-editor": "2.15.2",
     "bootstrap": "5.3.3",

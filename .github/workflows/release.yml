@@ -26,26 +26,19 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools wheel build
+          pip install setuptools wheel build setuptools-scm
 
       - name: Build package
         run: |
-          python -m build
-
-      - name: Get package version
-        id: get_version
-        run: |
-          echo version="$(python -c 'from configwebui import __version__; print(__version__)')" >> $GITHUB_OUTPUT
+          python -m build -n --sdist --wheel
 
       - name: Create GitHub Release
-        env:    
-          VERSION: ${{ steps.get_version.outputs.version }}
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
           files: |
-            ./dist/configwebui_lucien-${{ env.VERSION }}-py3-none-any.whl
-            ./dist/configwebui_lucien-${{ env.VERSION }}.tar.gz
+            ./dist/*.whl
+            ./dist/*.tar.gz
           generate_release_notes: true
 
       - name: Publish package distributions to PyPI

@@ -1,6 +1,6 @@
 import os
 
-STATIC_DIRECTORY = "configwebui/static"
+STATIC_DIRECTORY = "src/configwebui/static"
 CUSTOM_STATIC_FILES_BY_DIRECTORY = {
     "css": ["index.css"],
     "icon": [

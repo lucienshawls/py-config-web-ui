@@ -1,13 +1,26 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "wheel", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "configwebui-lucien"
-requires-python = ">=3.8, <4"
+dependencies = ["Flask", "jsonschema"]
+requires-python = ">=3.10"
 authors = [{ name = "Lucien Shaw", email = "myxlc55@outlook.com" }]
+description = "A simple web-based configuration editor for Python applications."
 readme = { file = "README.md", content-type = "text/markdown" }
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = [
+    "configuration",
+    "editor",
+    "web",
+    "tool",
+    "json",
+    "yaml",
+    "ui",
+    "flask",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: Flask",
@@ -15,12 +28,10 @@ classifiers = [
     "Natural Language :: English",
     "Natural Language :: Chinese (Simplified)",
     "Operating System :: OS Independent",
-    "License :: OSI Approved :: MIT License",
+    # "License :: OSI Approved :: MIT License",
     "Programming Language :: JavaScript",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -30,7 +41,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: User Interfaces",
 ]
-dynamic = ["version", "dependencies", "description", "keywords"]
+dynamic = ["version"]
 
 [project.urls]
 "Homepage" = "https://github.com/lucienshawls/py-config-web-ui"
@@ -38,3 +49,13 @@ dynamic = ["version", "dependencies", "description", "keywords"]
 "Release notes" = "https://github.com/lucienshawls/py-config-web-ui/releases"
 "Source" = "https://github.com/lucienshawls/py-config-web-ui.git"
 "Tracker" = "https://github.com/lucienshawls/py-config-web-ui/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"

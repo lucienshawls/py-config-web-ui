@@ -4,7 +4,7 @@ import json
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from configwebui import ConfigEditor, UserConfig
+from src.configwebui import ConfigEditor, UserConfig
 from demo import demo_main
 
 CONFIG_EDITOR = ConfigEditor(app_name="Demo UI", main_entry=demo_main.main)
