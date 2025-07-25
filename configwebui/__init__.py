@@ -834,11 +834,6 @@ class UserConfig:
 
         self.default_profile_only = default_profile_only
 
-        # self.default_profile_only = False
-        # if default_profile_only:
-        #     self.add_profile(name=UserConfig.DEFAULT_PROFILE_NAME, save_file=False)
-        #     self.default_profile_only = True
-
     @staticmethod
     def default_extra_validation_func(
         name: str,

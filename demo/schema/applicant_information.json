@@ -1,0 +1,47 @@
+{
+    "title": "Applicant Information",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "type": "string",
+            "minLength": 1
+        },
+        "age": {
+            "title": "Age",
+            "type": "integer"
+        },
+        "gender": {
+            "title": "Gender",
+            "type": "string",
+            "description": "We fully respect, understand, and embrace all genders. For this reason, we are unable to list each and every gender, and we appreciate your understanding.",
+            "enum": [
+                "Male",
+                "Female",
+                "Other"
+            ]
+        },
+        "contact_information": {
+            "title": "Contact Infomation",
+            "type": "object",
+            "properties": {
+                "email": {
+                    "title": "Email",
+                    "type": "string",
+                    "format": "email"
+                },
+                "phone": {
+                    "title": "Phone",
+                    "type": "string",
+                    "pattern": "^\\+?\\d{1,4}\\s?\\d{8,15}$",
+                    "description": "Country code is supported."
+                }
+            }
+        }
+    },
+    "required": [
+        "name",
+        "age",
+        "contact_information"
+    ]
+}

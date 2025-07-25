@@ -3,8 +3,7 @@ test*
 /config/*
 
 # Examples
-examples/config/*
-!examples/config/.gitkeep
+examples*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

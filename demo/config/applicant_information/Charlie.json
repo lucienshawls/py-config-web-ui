@@ -1,0 +1,9 @@
+{
+    "age": 24,
+    "contact_information": {
+        "email": "charlie@example.com",
+        "phone": "+852 94791234"
+    },
+    "gender": "Female",
+    "name": "Charlie"
+}

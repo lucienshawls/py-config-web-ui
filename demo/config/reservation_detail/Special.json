@@ -1,0 +1,8 @@
+{
+    "reservation_date": "2025-08-01",
+    "reservation_purpose": [
+        "Visit"
+    ],
+    "reservation_time_end": "14:00",
+    "reservation_time_start": "13:00"
+}

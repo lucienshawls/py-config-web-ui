@@ -1,0 +1,35 @@
+{
+    "title": "Select Profile for Main Configuration",
+    "type": "object",
+    "properties": {
+        "user_credential": {
+            "type": "string",
+            "title": "Active User Credential Profile",
+            "description": "Select the user credential profile to use.",
+            "enum": [
+                "Default"
+            ]
+        },
+        "applicant_information": {
+            "type": "string",
+            "title": "Active Applicant Information Profile",
+            "description": "Select the applicant information profile to use.",
+            "enum": [
+                "Default"
+            ]
+        },
+        "reservation_detail": {
+            "type": "string",
+            "title": "Active Reservation Detail Profile",
+            "description": "Select the reservation detail profile to use.",
+            "enum": [
+                "Default"
+            ]
+        }
+    },
+    "required": [
+        "user_credential",
+        "applicant_information",
+        "reservation_detail"
+    ]
+}

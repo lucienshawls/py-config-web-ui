@@ -1,0 +1,47 @@
+{
+    "title": "Reservation Detail",
+    "type": "object",
+    "properties": {
+        "reservation_date": {
+            "type": "string",
+            "title": "Reservation Date",
+            "format": "date"
+        },
+        "reservation_time_start": {
+            "type": "string",
+            "title": "Reservation Time (start)",
+            "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
+            "description": "Please enter the time in 24-hour format, e.g., 14:30."
+        },
+        "reservation_time_end": {
+            "type": "string",
+            "title": "Reservation Time (end)",
+            "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
+            "description": "Please enter the time in 24-hour format, e.g., 14:30."
+        },
+        "reservation_purpose": {
+            "type": "array",
+            "title": "Reservation Purpose",
+            "uniqueItems": true,
+            "items": {
+                "type": "string",
+                "enum": [
+                    "Visit",
+                    "Consult",
+                    "Testing",
+                    "Interview"
+                ]
+            }
+        },
+        "notes": {
+            "type": "string",
+            "title": "Notes"
+        }
+    },
+    "required": [
+        "reservation_date",
+        "reservation_time_start",
+        "reservation_time_end",
+        "reservation_purpose"
+    ]
+}
