@@ -2,9 +2,9 @@
 Flask web application for managing and interacting with user configurations.
 
 This application provides a set of routes and APIs for handling user configurations
-through a web interface and API endpoints. It allows users to view, add, update, 
-rename, and delete profiles within configurations. Additionally, it includes endpoints 
-for launching, stopping, and interacting with a main entry process, as well as handling 
+through a web interface and API endpoints. It allows users to view, add, update,
+rename, and delete profiles within configurations. Additionally, it includes endpoints
+for launching, stopping, and interacting with a main entry process, as well as handling
 terminal output and application shutdowns.
 
 Routes:
@@ -21,28 +21,29 @@ Classes:
     - ConfigEditor: A class for managing user configurations, profiles, and interacting with the main program.
 
 Usage:
-    The application is built using Flask and provides both a user interface for 
-    configuration management and an API for programmatic access to configuration data 
-    and terminal output. It includes handling of configuration profiles and offers 
-    functionality to execute and manage a main entry process, such as launching and 
+    The application is built using Flask and provides both a user interface for
+    configuration management and an API for programmatic access to configuration data
+    and terminal output. It includes handling of configuration profiles and offers
+    functionality to execute and manage a main entry process, such as launching and
     stopping the server, and retrieving terminal output.
 
-    Flash messages are used to provide feedback to the user, and the application 
+    Flash messages are used to provide feedback to the user, and the application
     supports dynamic content rendering based on configuration data.
 """
 
 from flask import (
     Blueprint,
+    current_app,
     flash,
     make_response,
     redirect,
     render_template,
+    request,
     send_from_directory,
     url_for,
-    current_app,
-    request,
 )
 from markupsafe import escape
+
 from . import ConfigEditor, UserConfig
 
 ICON_CLASS = {
