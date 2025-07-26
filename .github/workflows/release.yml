@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up python 3.12
         uses: actions/setup-python@v5
@@ -26,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools wheel build setuptools-scm
+          pip install --upgrade setuptools wheel build setuptools-scm
 
       - name: Build package
         run: |
@@ -41,5 +43,25 @@ jobs:
             ./dist/*.tar.gz
           generate_release_notes: true
 
-      - name: Publish package distributions to PyPI
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  merge_dev_to_master:
+    name: Merge dev -> master
+    runs-on: ubuntu-latest
+    needs: build_and_publish
+    permissions:
+      contents: write
+    if: success()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge dev into master
+        run: |
+          git fetch origin master
+          git checkout master
+          git merge --ff-only origin/dev
+          git push origin master
