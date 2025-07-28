@@ -264,14 +264,14 @@ class UserConfig:
     @staticmethod
     def default_extra_validation_func(
         name: str,
-        config: dict,
+        config: dict | None,
     ) -> ResultStatus:
         """
         Default extra validation function.
 
         Args:
-            name (str): Profile name.
-            config (dict): Configuration data to validate.
+            name (str): Configuration name.
+            config (dict or None): Configuration data to validate.
 
         Returns:
             ResultStatus: Always returns a successful status.
