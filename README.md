@@ -27,46 +27,106 @@ Package on PyPI: [configwebui-lucien · PyPI](https://pypi.org/project/configweb
 - **Seamless Fallback**: After applying this tool, your program can still run normally even if the web-based interface is not accessed. This ensures uninterrupted functionality in all scenarios.
 
 ### Screenshots
-
+- Automatically generate a web interface with only a schema
+![A General Web Interface that allows users to edit configurations](docs/general.png)
+- Edit different profiles of different configs with ease
+![Users are allowed to edit different profiles of different configs and save configs](docs/save.png)
+- Run the main program and see the terminal output here
+![Running main program and show the terminal output](docs/run.png)
 
 ## Try it out
 To get an intuitive understanding of how to use this tool, you can do the following:
 
 1. Clone this repository
-```shell
-git clone https://github.com/lucienshawls/py-config-web-ui
-cd ./py-config-web-ui
-```
+    ```shell
+    git clone https://github.com/lucienshawls/py-config-web-ui
+    cd ./py-config-web-ui
+    ```
 
 2. Install dependencies in a virtual environment or a conda environment to avoid conflicts (or not).
-```shell
-pip install -r ./requirements.txt
-```
+    ```shell
+    pip install -r ./requirements.txt
+    ```
 
 3. Run demo!
-```shell
-python ./demo/demo_ui.py
-```
+    ```shell
+    python ./demo/demo_ui.py
+    ```
 
 4. Switch to your web browser
 
-If your browser does not pop up, visit the link that shows in your terminal.
+    If your browser does not pop up, visit the link that shows in your terminal.
 
 5. Edit and save any config
 6. See if your config has been saved to `./demo/config`
 7. Click `Launch main program` (a submenu from `Save` in the navigation bar) and checkout the terminal output
 
-It should output some messages based on your config.
+    It should run `./demo/demo_main.py` and display some messages based on the config, just like running that Python file from the terminal.
+
+## Architecture
+As you see from the demo: with this package, your application can automatically generate a full-featured configuration editor UI from a schema. Here's how the architecture breaks down:
+
+```
+Config Schema --(defined in)--> UserConfig --(included in)--> ConfigEditor --(features)--> Local Web UI
+```
+
+### 0. Data Format
+Developers can use `json`, `yaml`, `toml`, or any configuration format; just convert it to a Python `dict` when passing data into the system.
+
+Internally, everything works with plain `dict` objects: the package requires only a `dict` on input and returns a `dict` on output.
+
+That means, developers never need to worry about parsing or formatting when interacting with this package; just read your config from whatever source, supply it as a `dict`, and receive a `dict` back when saving.
+
+### 1. Schema Input
+Write a schema that defines the structure, defaults, types, and validation rules for each of your config. This schema becomes the single source of truth for generating the entire editor interface.
+
+Learn more about schemas: [Json Schema](https://json-schema.org/)
+
+### 2. UserConfig - Config Instance Wrapper
+Each config schema and its corresponding config data are wrapped inside a `UserConfig` object. This class:
+
+- Provides the schema for UI rendering;
+
+- Validates user inputs based on the schema (including required fields, types, ranges, enums, etc.);
+
+- Manages several profiles (they are based on the same schema; each stores an independent configuration);
+
+- Connects to a developer-defined validation function for custom validations (aside from schema-based validations);
+
+- Connects to a developer-defined save function to save configurations;
+
+This modular design allows developers to manage multiple independent configurations within a single application.
+
+### 3. ConfigEditor - Main Web UI Controller
+The ConfigEditor is the application's core orchestrator. It:
+
+Starts a local HTTP server to serve the web interface.
+
+Manages one or more UserConfig instances.
+
+Automatically generates interactive UI forms from each schema.
+
+Handles the UI-to-backend workflows: loading configuration data, saving updates, and invoking actions like running scripts.
 
 ## Use it in your own project
-1. Install
-
-In the environment of your own project, run:
+### 1. Installation
+Activate the python environment of your own project, and choose one of the installation methods:
+1. Online installation from PyPI
 ```shell
 pip install configwebui-lucien
 ```
+2. Offline installtion from Github release
 
-2. Integrate
+Download the `.whl` file from the [Latest Release](https://github.com/lucienshawls/py-config-web-ui/releases/latest). Install this using pip.
+
+3. Make your own build
+```shell
+pip install setuptools setuptools-scm wheel build
+python -m build -n --sdist --wheel
+```
+Then you can get the `.whl` file from `./dist/`. Install this using pip.
+
+### 2. Import
 
 In your python file, import this package:
 ```python
@@ -80,159 +140,210 @@ from configwebui import *
 
 They have exactly the same effect.
 
-3. Optional preparations
+### 3. Integration
+1. Preparation
 
-- Set up a function that varifies the config
+    Generally, for each configuration, you will need:
+    - `schema` of type `dict`
+    - `extra_validation_function` which is `Callable`
+    - `save function` which is `Callable`
 
-When user clicks the `Save` button on the webpage, the config will first pass the extra validations before it can be saved to the memory. You can set up your own validation function.
+    Additionally, you will need:
+    - `main_entry_point` which is `Callable`
 
-Your function should take one positional argument, which is for the config itself (`config`) and accepts a `dict`.
+    In Detail:
+    - Set up a function that verifies the config
 
-Your function should return a `ResultStatus` object or a `boolean` value. 
+        When user clicks the `Save` button on the webpage, the config will first pass the extra validations before it can be saved to the memory. You can set up your own validation function.
 
-If you choose the former, you can attach several error messages that the user can see on the webpage. For example, instantiate a `ResultStatus` object and set the messages:
+        Your function should take two positional arguments:
+        - `name` of type `str`
+        - `config` of type `dict` or `None`
 
-```python
-# True indicates a success
-res1 = ResultStatus(True, "Success!")
+        Your function should return a `ResultStatus` object or a `boolean` value. 
 
-# False indicates a failure
-res2 = ResultStatus(False, ["Failed!", "Incorrect format"])  # Message lists are also supported
+        If you choose the former, you can attach several error messages that the user can see on the webpage. For example, instantiate a `ResultStatus` object and set the messages:
 
-# Alternatively, you can also instantiate a ResultStatus object with no messages, and add messages or change status later.
-res3 = ResultStatus(True)
-res3.set_status(False)
-res3.add_message("message 1")
-```
+        ```python
+        from configwebui import *
 
-This function is related to a specific `UserConfig` that you set up later.
 
-Example:
-```python
-def always_pass(config: dict | list) -> ResultStatus:
-    # Instantiate a ResultStatus object with no messages, and set its status to True.
-    res = ResultStatus(True)
-    if False:
-        # Just to show what to do when validation fails
-        res.set_status(False)
-        res.add_message("message 1")
-        res.add_message("message 2")
+        # True indicates a success
+        res1 = ResultStatus(True, "Success!")
 
-    return res
-```
+        # False indicates a failure
+        res2 = ResultStatus(False, ["Failed!", "Incorrect format"])  # Message lists are also supported
 
-- Set up a function that saves config
+        # Alternatively, you can also instantiate a ResultStatus object with no messages, and add messages or change status later.
+        res3 = ResultStatus(True)
+        res3.set_status(False)
+        res3.add_message("message 1")
+        ```
 
-When user clicks the `Save` button on the webpage, and after the config passes extra validations, the config is saved to the memory immediately and your save function is then called in a separate thread.
+        This validation function is related to a specific `UserConfig` that you set up later.
 
-You can choose not to set the save function; however, if you do so, all edited configurations will only remain in memory and cannot be read, and will disappear when the program is restarted.
+        Example:
+        ```python
+        from configwebui import *
 
-Your function should take one positional argument, which is for the config itself (`config`).
 
-You can freely choose the type (`json`, `yaml`, `toml`, etc.) and save method of the configuration file.
+        def always_pass(
+            config_name: str,
+            config: dict | None,
+        ) -> ResultStatus:
+            # Instantiate a ResultStatus object with no messages, and set its status to True.
+            res = ResultStatus(True)
+            if False:
+                # Just to show what to do when validation fails
+                res.set_status(False)
+                res.add_message("message 1")
+                res.add_message("message 2")
 
-Parameter validation is not needed. It is guaranteed that the parameters satisfy your requirements.
+            return res
+        ```
 
-Return values are not needed either, because for now, the package does not read the result.
+    - Set up a function that saves config
 
-This function is related to a specific `UserConfig` that you set up later.
+        When user clicks the `Save` button on the webpage, and after the config passes extra validations, the config is saved to the memory immediately and your save function is then called in a separate thread.
 
-Example:
-```python
-import json
-import os
-def my_save(config: dict | list):
-    # You don't need to perform parameter validation
-    os.makedirs("./config", exist_ok=True)
-    with open("config/myconfig.json", "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=4)
-    print(config)
-```
+        You can choose not to set the save function; however, if you do so, all edited configurations will only remain in memory and cannot be read, and will disappear when the program is restarted.
 
-- Set up a main entry point
+        Your function should take three positional arguments:
+        - `user_config_name` of type `str`
+        - `profile_name` of type `str`
+        - `config` of type `dict`
 
-When user clicks `Launch main program` button on the webpage, your save function is called in a separate thread.
+        Parameter validation is not needed. It is guaranteed that the parameters satisfy your requirements.
 
-Your function should take no positional arguments.
+        Return values are not needed either, because for now, the package does not read the result.
 
-Return values are not needed.
+        This function is related to a specific `UserConfig` that you set up later.
 
-This function is related to a specific `ConfigEditor` that you set up later.
+        Example:
+        ```python
+        import json
+        import os
 
-ATTENTION: Your main entry should be treated as an independent program that independently obtains configurations from the location where the configuration file is saved, and executes the code. Therefore, when the main entry is called, configuration-related parameters will not be passed in.
+        from configwebui import *
 
-Example:
-```python
-import os
-import json
-def my_main_entry():
-    print("======== This is main entry =======")
-    if os.path.exists("config/myconfig.json"):
-        with open("config/myconfig.json", "r", encoding="utf-8") as f:
-            config = json.load(f)
-        print(config)
-```
 
-4. Fire it up
+        def my_save(user_config_name: str, profile_name: str, config: dict):
+            # You don't need to perform parameter validation
+            os.makedirs(f"./config/{user_config_name}", exist_ok=True)
+            with open(
+                f"./config/{user_config_name}/{profile_name}.json", "w", encoding="utf-8"
+            ) as f:
+                json.dump(config, f, indent=4)
+            print(config)
+        ```
 
-Instantiate a `ConfigEditor` object, and add one or more config schema to it:
-```python
-import os
-schema = {
-    "title": "Example Schema",
-    "type": "object",
-    "properties": {
-        "name": {"type": "string", "title": "Name"},
-        "age": {"type": "integer", "title": "Age"},
-        "is_student": {"type": "boolean"},
-    },
-}  # You need to create this
-# Create a ConfigEditor object
-config_editor = ConfigEditor(
-    app_name="Trial",  # display name, is used in the webpage title
-    main_entry=my_main_entry,  # optional, main entry point, make sure it can run in a thread.
-)
+    - Set up a main entry point
 
-# Create a UserConfig object
-user_config = UserConfig(
-    name="myconfig",  # identifier
-    friendly_name="Main config",  # display name
-    schema=schema,  # schema
-    extra_validation_func=always_pass,  # optional, extra validation function
-    save_func=my_save,  # optional, save function
-)
+        When user clicks `Launch main program` button on the webpage, your save function is called in a separate thread.
 
-# Load the config from file and set initial values (or not, as you wish)
-def load_config(name: str) -> dict | list:
-    file_path = f"config/{name}.json"
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            config = json.load(f)
-    else:
-        config = None
-    return config
+        Your function should take no positional arguments.
 
-config_from_file = load_config("myconfig")
-if config_from_file is not None:
-    user_config.set_config(
-        config=config_from_file,
-        skip_schema_validations=True,  # optional, skip schema validations this time only
-        skip_extra_validations=True,  # optional, skip extra validations this time only
+        Return values are not needed.
+
+        This function is related to a specific `ConfigEditor` that you set up later.
+
+        ATTENTION: Your main entry should be treated as an independent program that independently obtains configurations from the location where the configuration file is saved, and executes the code. Therefore, when the main entry is called, configuration-related parameters will not be passed in.
+
+        Example:
+        ```python
+        import json
+        import os
+
+
+        def my_main_entry():
+            print("======== This is main entry =======")
+            if os.path.exists("config/myconfig.json"):
+                with open("config/myconfig.json", "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                print(config)
+        ```
+
+2. Fire it up
+
+    Instantiate a `ConfigEditor` object, and add one or more `UserConfig`s to it:
+    ```python
+    import os
+
+    from configwebui import *
+
+
+    schema = {
+        "title": "Example Schema",
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "title": "Name"},
+            "age": {"type": "integer", "title": "Age"},
+            "is_student": {"type": "boolean"},
+        },
+    }  # You need to create this
+
+    # Load the config from file and set initial values
+    def my_load(user_config_name: str, profile_name: str) -> dict:
+        # Read from config/<user_config_name>/<profile_name>.json
+        file_path = f"config/{user_config_name}/{profile_name}.json"
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        else:
+            config = None
+        return config
+
+
+    # Create a ConfigEditor object
+    config_editor = ConfigEditor(
+        app_name="Trial",  # display name, is used in the webpage title
+        main_entry=my_main_entry,  # optional, main entry point, make sure it can run in a thread.
     )
 
-# Add the UserConfig object to the ConfigEditor object
-config_editor.add_user_config(user_config=user_config)
-```
+    # Maybe there are multiple configurations and profiles. You may use a for-loop to iterate all names (e.g., from file names of a specific directory.)
 
-5. Run it
+    # Create a UserConfig object
+    cur_config_name = "user_info"
+    cur_config_friendly_name = "User Info"
+    cur_user_config = UserConfig(
+        name=cur_config_name,  # identifier, "user_info"
+        friendly_name=cur_config_friendly_name,  # display name, "User Info"
+        schema=schema,  # schema
+        extra_validation_func=always_pass,  # optional, extra validation function
+        save_func=my_save,  # optional, save function
+        default_profile_only=False,  # Defaults to False.
+        # If True, this UserConfig contains only one default profile, and custom profiles are disabled.
+    )
 
-Run the ConfigEditor!
+    cur_profile_name = "Alice"
+    cur_config_from_file = my_load(
+        cur_config_name,  # "user_info"
+        cur_profile_name,  # "Alice"
+    )
 
-Example:
-```python
-# Change the port to 5000 if you do not have enough permissions.
-config_editor.run(host="localhost", port=80)
-```
+    cur_user_config.update_profile(
+        name=cur_profile_name,  # "Alice"
+        config=cur_config_from_file,
+        skip_schema_validations=True,  # optional, skip schema validations this time only
+        skip_extra_validations=True,  # optional, skip extra validations this time only
+        save_file=False,  # Defaults to False
+        # Usually, when users make a change to the config, update_profile will be called, and the changes are saved to both the memory and the file.
+        # But now, saving to file is not necessary, since we just fetched the config from file.
+    )
+
+    # Add the UserConfig object to the ConfigEditor object
+    config_editor.add_user_config(user_config=cur_user_config)
+    ```
+
+3. Run it
+
+    Run the ConfigEditor!
+
+    Example:
+    ```python
+    # Change the port to 5000 if you do not have enough permissions.
+    config_editor.run(host="127.0.0.1", port=80)
+    ```
 
 ## Acknowledgements
 I would like to express my gratitude to the following projects and individuals for different scenarios and reasons:
