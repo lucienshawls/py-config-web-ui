@@ -1,0 +1,23 @@
+name: Verify PR head branch
+
+on:
+  pull_request:
+    types: 
+      - opened
+      - reopened
+      - ready_for_review
+      - edited
+      - synchronize
+    branches:
+      - master
+
+jobs:
+  verify_pr_head_branch:
+    name: Verify PR head branch
+    if: ${{ github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.ref != 'dev' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Manually fail the workflow
+        run: |
+          echo "::error::Any PR targeting the 'master' branch must come from the 'dev' branch."
+          exit 1

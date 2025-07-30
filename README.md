@@ -27,12 +27,19 @@ Package on PyPI: [configwebui-lucien · PyPI](https://pypi.org/project/configweb
 - **Seamless Fallback**: After applying this tool, your program can still run normally even if the web-based interface is not accessed. This ensures uninterrupted functionality in all scenarios.
 
 ### Screenshots
+Screenshots are only available at the [GitHub repository](https://github.com/lucienshawls/py-config-web-ui) of this project.
+
 - Automatically generate a web interface with only a schema
-![A General Web Interface that allows users to edit configurations](docs/general.png)
-- Edit different profiles of different configs with ease
-![Users are allowed to edit different profiles of different configs and save configs](docs/save.png)
-- Run the main program and see the terminal output here
-![Running main program and show the terminal output](docs/run.png)
+
+  ![Developers can automatically generate a web interface with only a schema](docs/general.png)
+
+- Edit different profiles of different configurations with ease
+
+  ![Users can edit different profiles of different configurations with ease](docs/save.png)
+
+- Run the main programs and see the terminal output
+
+  ![Users can run main programs and see the terminal output](docs/run.png)
 
 ## Try it out
 To get an intuitive understanding of how to use this tool, you can do the following:

@@ -1,0 +1,221 @@
+name: Generate changelog PR
+
+on:
+  pull_request:
+    types: 
+      - opened
+      - reopened
+      - ready_for_review
+    branches: 
+      - master
+
+jobs:
+  check:
+    name: Perform checks
+    if: >
+      github.event.pull_request.draft == false &&
+      startsWith(github.event.pull_request.title, 'Release v') &&
+      github.event.pull_request.base.ref == 'master' &&
+      github.event.pull_request.head.ref == 'dev'
+    runs-on: ubuntu-latest
+    outputs:
+      NEW_TAG: ${{ steps.info.outputs.NEW_TAG }}
+      LATEST_TAG: ${{ steps.info.outputs.LATEST_TAG }}
+      LATEST_STABLE_TAG: ${{ steps.info.outputs.LATEST_STABLE_TAG }}
+      IS_VALID: ${{ steps.check_tag.outputs.IS_VALID }}
+      IS_BETA: ${{ steps.check_tag.outputs.IS_BETA }}
+      ERR_MSG: ${{ steps.set_err_msg.outputs.ERR_MSG }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Get current commit tag
+        run: |
+          CUR_COMMIT_TAG=$(git tag --list "v*" --contains)
+          echo "CUR_COMMIT_TAG=$CUR_COMMIT_TAG" >> $GITHUB_ENV
+
+      - name: Extract new tag from PR title
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          NEW_TAG=$(echo "$title" | sed -E "s/([Rr]elease)//" | sed -e "s/^[[:space:]]*//" -e "s/[[:space:]]*$//")
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+
+      - name: Get latest tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match "v*")
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Get latest stable tag
+        run: |
+          LATEST_STABLE_TAG=$(git describe --tags --abbrev=0 --match "v*" --exclude "v*-*")
+          echo "LATEST_STABLE_TAG=$LATEST_STABLE_TAG" >> $GITHUB_ENV
+
+      - name: Gather information
+        id: info
+        run: |
+          echo "CUR_COMMIT_TAG=$CUR_COMMIT_TAG" >> $GITHUB_ENV
+
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "LATEST_STABLE_TAG=$LATEST_STABLE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Set up python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check if new tag is valid
+        id: check_tag
+        env:
+          NEW_TAG: ${{ steps.info.outputs.NEW_TAG }}
+          LATEST_TAG: ${{ steps.info.outputs.LATEST_TAG }}
+          CUR_COMMIT_TAG: ${{ env.CUR_COMMIT_TAG }}
+          CHECKER_CMD: "python utils/check_tag.py"
+
+        run: |
+          RES=$($CHECKER_CMD "$NEW_TAG" "$LATEST_TAG" "$CUR_COMMIT_TAG")
+          if [ "$RES" == "Stable" ]; then
+            IS_BETA=0
+            IS_VALID=1
+          elif [ "$RES" == "Beta" ]; then
+            IS_BETA=1
+            IS_VALID=1
+          else
+            IS_VALID=0
+            ERR_MSG=$RES
+          fi
+
+          echo "IS_VALID=$IS_VALID" >> $GITHUB_OUTPUT
+          echo "IS_BETA=$IS_BETA" >> $GITHUB_OUTPUT
+          echo "ERR_MSG=$ERR_MSG" >> $GITHUB_ENV
+
+      - name: Set error message
+        id: set_err_msg
+        if: ${{ steps.check_tag.outputs.IS_VALID == '0' }}
+        env:
+          ERR_MSG: ${{ env.ERR_MSG }}
+        run: |
+          { echo "ERR_MSG<<EOF"
+            echo '${{ env.ERR_MSG }}'
+            echo ""
+            echo "Closing this PR due to the error above."
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  generate-changelog:
+    name: Generate changelog PR
+    needs:
+      - check
+    if: ${{ needs.check.outputs.IS_VALID == '1' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Set up python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install commitizen
+
+      - name: Generate release notes and changelog
+        env: 
+          NEW_TAG: ${{ needs.check.outputs.NEW_TAG }}
+          LATEST_TAG: ${{ needs.check.outputs.LATEST_TAG }}
+          LATEST_STABLE_TAG: ${{ needs.check.outputs.LATEST_STABLE_TAG }}
+          IS_BETA: ${{ needs.check.outputs.IS_BETA }}
+
+        run: |
+          if [ "$IS_BETA" == "0" ]; then
+            cz ch --dry-run --unreleased-version "$NEW_TAG" --start-rev "$LATEST_STABLE_TAG" --merge-prerelease > UPDATE.md
+            cz ch --dry-run --unreleased-version "$NEW_TAG" --merge-prerelease > CHANGELOG.md
+          elif [ "$IS_BETA" == "1" ]; then
+            cz ch --dry-run --unreleased-version "$NEW_TAG" --start-rev "$LATEST_TAG" > UPDATE.md
+            cz ch --dry-run --unreleased-version "$NEW_TAG" > CHANGELOG.md
+          fi
+
+          echo "$NEW_TAG" > VERSION.md
+
+      - name: Generate PR body
+        id: generate_pr_body
+        env:
+          NEW_TAG: ${{ needs.check.outputs.NEW_TAG }}
+          LATEST_TAG: ${{ needs.check.outputs.LATEST_TAG }}
+          LATEST_STABLE_TAG: ${{ needs.check.outputs.LATEST_STABLE_TAG }}
+          IS_BETA: ${{ needs.check.outputs.IS_BETA }}
+        run: |
+          PR_BODY_FILE="pr_body.md"
+          {
+            echo "Target PR: ${{ github.event.pull_request.html_url }}"
+            echo '<details><summary>Debug info</summary>'
+            echo ''
+            echo '```'
+
+            if [ "$IS_BETA" == "0" ]; then
+              echo "type: stable release"
+            elif [ "$IS_BETA" == "1" ]; then
+              echo "type: beta release"
+            fi
+
+            echo "new_tag: $NEW_TAG"
+            echo "latest_tag: $LATEST_TAG"
+            echo "latest_stable_tag: $LATEST_STABLE_TAG"
+            echo '```'
+            echo ''
+            echo '</details>'
+          } > $PR_BODY_FILE
+
+          { echo "PR_BODY<<EOF"
+            cat "$PR_BODY_FILE"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          rm -f $PR_BODY_FILE
+
+      - name: Create changelog PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "docs: auto update changelogs for ${{ needs.check.outputs.NEW_TAG }}"
+          branch: changelog
+          delete-branch: true
+          base: dev
+          sign-commits: true
+          title: "docs: auto update changelogs for ${{ needs.check.outputs.NEW_TAG }}"
+          body: "${{ steps.generate_pr_body.outputs.PR_BODY }}"
+
+  close-pr:
+    name: Close PR if errors occur
+    needs:
+      - check
+    if: ${{ needs.check.outputs.IS_VALID == '0' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Close PR if errors occur
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ERR_MSG: ${{ needs.check.outputs.ERR_MSG }}
+        run: |
+          gh pr close ${{ github.event.pull_request.number }} -c "$ERR_MSG" -R ${{ github.repository }}
+
+      - name: Manually Fail the workflow
+        run: |
+          echo "::error::Changelog PR generation failed."
+          exit 1

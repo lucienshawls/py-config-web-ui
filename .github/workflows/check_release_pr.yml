@@ -1,0 +1,96 @@
+name: Check release PR
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - synchronize
+
+jobs:
+  check_if_release_ready:
+    name: Check if release is ready
+    if: >
+      github.event.pull_request.draft == false &&
+      startsWith(github.event.pull_request.title, 'Release v') &&
+      github.event.pull_request.base.ref == 'master' &&
+      github.event.pull_request.head.ref == 'dev'
+    runs-on: ubuntu-latest
+    outputs:
+      READY: ${{ steps.check_version.outputs.READY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract new tag from PR title
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          NEW_TAG=$(echo "$title" | sed -E "s/([Rr]elease)//" | sed -e "s/^[[:space:]]*//" -e "s/[[:space:]]*$//")
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+
+      - name: Compare versions
+        id: check_version
+        continue-on-error: true
+        run: |
+          if [ ! -f "VERSION.md" ]; then
+            echo "READY=0" >> $GITHUB_OUTPUT
+            echo "::error::VERSION.md file not found."
+            exit 1
+          fi
+
+          FILE_VERSION=$(cat VERSION.md | tr -d '\n')
+          PR_VERSION="$NEW_TAG"
+          
+          if [ "$FILE_VERSION" != "$PR_VERSION" ]; then
+            echo "READY=0" >> $GITHUB_OUTPUT
+            echo "::error::Version mismatch."
+            exit 1
+          fi
+          echo "READY=1" >> $GITHUB_OUTPUT
+
+  set_to_draft:
+    name: Set release PR to draft
+    needs: check_if_release_ready
+    if: >
+      needs.check_if_release_ready.outputs.READY == '0' &&
+      github.event.pull_request.head.ref == 'dev'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set PR to draft
+        env:
+          GITHUB_TOKEN: ${{ secrets.PYCONFIGWEBUI_RELEASE }}
+        run: |
+          gh pr ready ${{ github.event.pull_request.number }} --undo
+
+      - name: Manually Fail the workflow
+        run: |
+          echo "::error::Release is not ready. Please merge the changelog PR first."
+          exit 1
+
+  auto_merge_release_pr:
+    name: Auto merge release PR
+    needs: check_if_release_ready
+    if: >
+      needs.check_if_release_ready.outputs.READY == '1' &&
+      github.event.pull_request.head.ref == 'dev' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.PYCONFIGWEBUI_RELEASE }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --auto --merge
