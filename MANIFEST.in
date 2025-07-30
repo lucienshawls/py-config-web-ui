@@ -3,6 +3,7 @@ recursive-include src/configwebui/templates *
 
 prune .github
 prune demo
+prune docs
 prune utils
 
 exclude .gitattributes
