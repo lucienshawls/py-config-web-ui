@@ -107,13 +107,13 @@ This modular design allows developers to manage multiple independent configurati
 ### 3. ConfigEditor - Main Web UI Controller
 The ConfigEditor is the application's core orchestrator. It:
 
-Starts a local HTTP server to serve the web interface.
+- Starts a local HTTP server to serve the web interface.
 
-Manages one or more UserConfig instances.
+- Manages one or more UserConfig instances.
 
-Automatically generates interactive UI forms from each schema.
+- Automatically generates interactive UI forms from each schema.
 
-Handles the UI-to-backend workflows: loading configuration data, saving updates, and invoking actions like running scripts.
+- Handles the UI-to-backend workflows: loading configuration data, saving updates, and invoking actions like running scripts.
 
 ## Use it in your own project
 ### 1. Installation
