@@ -70,13 +70,14 @@ from flask import Flask
 from jsonschema import ValidationError, validate
 from werkzeug.serving import make_server
 
-from .utils import (
+from .runner import (
     BASE_ERROR_STREAM,
     BASE_OUTPUT_STREAM,
     ProgramRunner,
     ResultStatus,
     ThreadOutputStream,
 )
+from .utils import ResultStatus
 
 try:
     __version__ = version("configwebui-lucien")
